@@ -824,7 +824,7 @@ async function confirmApply() {
   btn.textContent = '저장 중...';
 
   try {
-    // 최신 DB 로드 (동시 신청 충돌 방지)
+    // 서버 최신 데이터 확인 (중복/마감 방지)
     await dbLoad();
 
     const uid = makeUid(currentUser);
@@ -844,13 +844,15 @@ async function confirmApply() {
       return;
     }
 
+    // 1) 로컬 DB 즉시 추가 → 화면 바로 갱신
     arr.push({ name: currentUser.name, site: currentUser.site, uid });
-    await dbSave();
-
     closeApply();
     render();
     updateStats();
     showToast('신청이 완료되었습니다! 🎉', 'ok');
+
+    // 2) 서버에 저장 (백그라운드)
+    await dbSave();
 
   } catch(e) {
     console.error('[confirmApply]', e);
@@ -866,18 +868,20 @@ async function doDelete(key, myUid) {
     showToast('본인의 신청만 취소할 수 있습니다.', 'err');
     return;
   }
+  // 1) 로컬 DB 즉시 수정 → 화면 바로 갱신 (서버 응답 기다리지 않음)
+  if (!DB[key]) return;
+  DB[key] = DB[key].filter(a => a.uid !== myUid);
+  if (DB[key].length === 0) delete DB[key];
+  render();
+  updateStats();
+  showToast('신청이 취소되었습니다.', 'ok');
+
+  // 2) 서버에 저장 (백그라운드)
   try {
-    await dbLoad();
-    if (!DB[key]) return;
-    DB[key] = DB[key].filter(a => a.uid !== myUid);
-    if (DB[key].length === 0) delete DB[key];
     await dbSave();
-    render();
-    updateStats();
-    showToast('신청이 취소되었습니다.', 'ok');
   } catch(e) {
-    console.error('[doDelete]', e);
-    showToast('취소 처리 중 오류가 발생했습니다.', 'err');
+    console.error('[doDelete] 서버 저장 실패:', e);
+    showToast('서버 저장 오류. 새로고침 후 확인해주세요.', 'err');
   }
 }
 

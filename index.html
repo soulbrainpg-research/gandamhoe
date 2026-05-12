@@ -6,951 +6,551 @@
 <title>연구소장 간담회 신청 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Gowun+Batang:wght@700&display=swap" rel="stylesheet">
 <style>
-/* ===== 기본 변수 ===== */
-:root {
-  --bg:#0f1117; --s1:#1a1d27; --s2:#22263a; --bd:#2e3350;
-  --acc:#4f8ef7; --tx:#e8eaf6; --mu:#8892b0;
-  --ok:#43d98c; --red:#ff5f7e;
-  --c-py:#4f8ef7; --c-yo:#a78bfa; --c-gj:#2db87a; --c-dj:#f7874f;
+:root{
+  --bg:#f0f4f9;--s1:#ffffff;--s2:#f5f7fb;--bd:#dde3ed;--bd2:#c8d3e8;
+  --acc:#2563eb;--tx:#1e2535;--mu:#6b7a99;
+  --ok:#16a34a;--red:#dc2626;
+  --c-py:#2563eb;--c-yo:#7c3aed;--c-gj:#16a34a;--c-dj:#ea580c;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh}
 
-/* ===== 헤더 ===== */
-header{
-  background:var(--s1);border-bottom:1px solid var(--bd);
-  padding:0 24px;height:56px;
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:50;
-}
-.logo{font-family:'Gowun Batang',serif;font-size:16px;font-weight:700}
+.hdr{background:var(--s1);border-bottom:1px solid var(--bd2);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.logo{font-family:'Gowun Batang',serif;font-size:16px;font-weight:700;color:var(--tx)}
 .logo em{color:var(--acc);font-style:normal}
 .hright{display:flex;align-items:center;gap:8px}
-.ubadge{display:flex;align-items:center;gap:6px;
-  background:var(--s2);border:1px solid var(--bd);
-  border-radius:20px;padding:4px 12px;font-size:12px}
-.udot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.ubadge{display:flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:20px;padding:3px 10px;font-size:12px;color:#1d4ed8}
+.udot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
 
-/* ===== 버튼 ===== */
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:8px 16px;border-radius:8px;border:none;
-  font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:600;
-  cursor:pointer;transition:all .15s;
-}
-.btn-p{background:var(--acc);color:#fff}
-.btn-p:hover{background:#3a7af0;transform:translateY(-1px)}
-.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.btn-c{background:var(--s2);border:1px solid var(--bd);color:var(--mu)}
+button{font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:7px 16px;border-radius:8px;border:1px solid var(--bd2);font-size:13px;font-weight:500;background:var(--s1);color:var(--tx)}
+.btn:hover{background:var(--s2)}
+.btn-p{background:var(--acc);color:#fff;border-color:var(--acc)}
+.btn-p:hover{background:#1d4ed8}
+.btn-p:disabled{opacity:.4;cursor:not-allowed}
+.btn-c{background:var(--s2);border:1px solid var(--bd2);color:var(--mu)}
 .btn-c:hover{border-color:var(--red);color:var(--red)}
-.btn-sm{padding:5px 10px;font-size:12px}
-.btn-lo{background:transparent;border:1px solid var(--bd);color:var(--mu);
-  font-size:12px;padding:5px 10px;border-radius:7px;cursor:pointer;
-  font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-lo{background:transparent;border:1px solid var(--bd2);color:var(--mu);font-size:12px;padding:5px 11px;border-radius:7px}
 .btn-lo:hover{border-color:var(--red);color:var(--red)}
-.btn-ref{background:transparent;border:1px solid var(--bd);color:var(--mu);
-  width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:15px;
-  display:flex;align-items:center;justify-content:center;transition:all .15s}
+.btn-ref{background:var(--s1);border:1px solid var(--bd);color:var(--mu);width:30px;height:30px;border-radius:7px;font-size:15px;display:flex;align-items:center;justify-content:center}
 .btn-ref:hover{border-color:var(--acc);color:var(--acc)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinning{animation:spin .7s linear infinite}
 
-/* ===== 모달 오버레이 ===== */
-.overlay{
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.78);backdrop-filter:blur(4px);
-  z-index:200;align-items:center;justify-content:center;padding:16px;
-}
-.overlay.open{display:flex}
-.modal{
-  background:var(--s1);border:1px solid var(--bd);
-  border-radius:16px;padding:28px;width:100%;max-width:400px;
-  box-shadow:0 24px 64px rgba(0,0,0,.6);
-}
-.modal h3{font-family:'Gowun Batang',serif;font-size:18px;margin-bottom:4px}
+/* 모달 — position:fixed 미사용, 인라인 플로우 */
+.modal-wrap{display:none;background:rgba(30,37,53,.35);padding:20px 16px;min-height:220px;align-items:center;justify-content:center}
+.modal-wrap.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bd2);border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 8px 24px rgba(30,37,53,.1)}
+.modal h3{font-family:'Gowun Batang',serif;font-size:18px;margin-bottom:4px;color:var(--tx)}
 .modal-sub{font-size:12px;color:var(--mu);margin-bottom:20px}
 .fg{margin-bottom:12px}
-.fg label{display:block;font-size:11px;color:var(--mu);margin-bottom:4px;
-  text-transform:uppercase;letter-spacing:.04em}
-.fg input,.fg select{
-  width:100%;background:var(--s2);border:1px solid var(--bd);
-  border-radius:8px;color:var(--tx);font-size:14px;
-  font-family:'Noto Sans KR',sans-serif;padding:9px 12px;
-  outline:none;transition:border-color .15s;
-}
+.fg label{display:block;font-size:11px;color:var(--mu);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select{width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--tx);font-size:14px;font-family:'Noto Sans KR',sans-serif;padding:9px 12px;outline:none;transition:border-color .15s}
 .fg input:focus,.fg select:focus{border-color:var(--acc)}
 .fg select option{background:var(--s1)}
-.apply-info{
-  background:var(--s2);border-radius:8px;padding:10px 13px;
-  margin-bottom:14px;font-size:13px;
-  display:flex;gap:10px;align-items:center;flex-wrap:wrap;
-}
-.apply-info .lb{color:var(--mu)}
-.apply-info .vl{font-weight:600}
-.apply-warn{
-  font-size:12px;color:var(--red);margin-bottom:12px;display:none;
-  padding:8px 11px;background:rgba(255,95,126,.08);
-  border-radius:8px;line-height:1.55;
-}
-.modal-btns{display:flex;gap:8px;margin-top:4px}
-.modal-btns .btn{flex:1}
+.ainfo{background:var(--s2);border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ainfo .lb{color:var(--mu)}.ainfo .vl{font-weight:600;color:var(--tx)}
+.awarn{font-size:12px;color:var(--red);margin-bottom:12px;display:none;padding:8px 11px;background:#fff1f2;border-radius:8px;line-height:1.55;border:1px solid #fecaca}
+.mbtns{display:flex;gap:8px;margin-top:4px}.mbtns .btn{flex:1}
 
-/* ===== 로딩 화면 ===== */
-.loading{
-  display:flex;position:fixed;inset:0;background:var(--bg);
-  flex-direction:column;align-items:center;justify-content:center;
-  gap:12px;z-index:300;
-}
-.loading.hide{display:none}
-.spinner{
-  width:36px;height:36px;border:3px solid var(--bd);
-  border-top-color:var(--acc);border-radius:50%;
-  animation:spin .8s linear infinite;
-}
-.loading-msg{font-size:13px;color:var(--mu)}
+/* 로딩 */
+.iscreen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:80px 0;background:var(--bg)}
+.iscreen.hide{display:none}
+.bspin{width:36px;height:36px;border:3px solid var(--bd2);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+.imsg{font-size:13px;color:var(--mu)}
 
-/* ===== 본문 래퍼 ===== */
+/* 토스트 (인라인) */
+.toast-bar{background:var(--s1);border:1px solid var(--bd2);border-radius:10px;padding:10px 16px;font-size:13px;text-align:center;margin:8px 16px 0;display:none}
+.toast-bar.show{display:block}
+.toast-bar.ok{border-color:#16a34a;color:#16a34a;background:#f0fdf4}
+.toast-bar.err{border-color:#dc2626;color:#dc2626;background:#fff1f2}
+
 .wrap{max-width:1100px;margin:0 auto;padding:18px 16px}
 
-/* ===== 안내 가이드 ===== */
-.guide{
-  background:var(--s1);border:1px solid var(--bd);
-  border-radius:14px;padding:16px 20px;margin-bottom:18px;
-}
-.guide-title{font-size:13px;font-weight:700;color:var(--acc);margin-bottom:10px}
-.guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
-.guide-box{background:var(--s2);border-radius:8px;padding:11px 13px;font-size:12px;color:var(--mu);line-height:1.65}
-.guide-box strong{color:var(--tx);font-weight:600;display:block;margin-bottom:5px;font-size:12px}
-.g-step{display:flex;flex-direction:column;gap:4px}
-.g-row{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--mu);line-height:1.45}
-.g-num{
-  min-width:18px;height:18px;background:var(--acc);color:#fff;
-  border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:10px;font-weight:700;flex-shrink:0;
-}
-.tags{margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);display:flex;flex-wrap:wrap;gap:6px}
-.tag{font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(79,142,247,.1);color:var(--acc);border:1px solid rgba(79,142,247,.25)}
-.tag.r{background:rgba(255,95,126,.08);color:var(--red);border-color:rgba(255,95,126,.2)}
-.tag.g{background:rgba(45,184,122,.08);color:var(--c-gj);border-color:rgba(45,184,122,.2)}
+/* 가이드 */
+.guide{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:16px 20px;margin-bottom:18px}
+.gtitle{font-size:13px;font-weight:700;color:var(--acc);margin-bottom:10px}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.gbox{background:var(--s2);border-radius:8px;padding:11px 13px;font-size:12px;color:var(--mu);line-height:1.65;border:1px solid var(--bd)}
+.gbox b{color:var(--tx);font-weight:600;display:block;margin-bottom:4px;font-size:12px}
+.grow{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--mu);line-height:1.45;margin-bottom:3px}
+.gn{min-width:18px;height:18px;background:var(--acc);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.tags{margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:11px;padding:2px 8px;border-radius:20px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.tag.r{background:#fff1f2;color:#dc2626;border-color:#fecaca}
+.tag.g{background:#f0fdf4;color:#16a34a;border-color:#bbf7d0}
 
-/* ===== 통계 카드 ===== */
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
-.stat-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:13px 16px}
-.stat-label{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
-.stat-val{font-family:'Gowun Batang',serif;font-size:24px;font-weight:700}
+/* 통계 */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.scard{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:13px 16px}
+.slbl{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.sval{font-family:'Gowun Batang',serif;font-size:24px;font-weight:700;color:var(--tx)}
 
-/* ===== 달력 컨트롤 ===== */
-.cal-ctrl{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
-.month-nav{display:flex;align-items:center;gap:12px}
-.month-btn{
-  background:var(--s1);border:1px solid var(--bd);color:var(--tx);
-  width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;transition:all .15s;
-}
-.month-btn:hover{border-color:var(--acc);color:var(--acc)}
-.month-btn:disabled{opacity:.3;cursor:not-allowed}
-.month-title{font-family:'Gowun Batang',serif;font-size:19px;font-weight:700;min-width:120px;text-align:center}
-.legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-.leg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mu)}
-.leg-dot{width:8px;height:8px;border-radius:50%}
+/* 달력 컨트롤 */
+.cctrl{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.mnav{display:flex;align-items:center;gap:12px}
+.mnav .nbtn{background:var(--s1);border:1px solid var(--bd2);color:var(--tx);width:32px;height:32px;border-radius:8px;font-size:15px}
+.mnav .nbtn:hover{border-color:var(--acc);color:var(--acc)}
+.mnav .nbtn:disabled{opacity:.3;cursor:not-allowed}
+.mtitle{font-family:'Gowun Batang',serif;font-size:19px;font-weight:700;min-width:120px;text-align:center;color:var(--tx)}
+.leg{display:flex;gap:12px;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mu)}
+.ld{width:8px;height:8px;border-radius:50%}
 
-/* ===== 달력 ===== */
-.cal-wrap{background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
-.cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:var(--s2);border-bottom:1px solid var(--bd)}
-.cal-head-cell{text-align:center;padding:9px 0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--mu)}
-.cal-head-cell.sun{color:var(--red)}
-.cal-head-cell.sat{color:var(--acc)}
-.cal-body{display:grid;grid-template-columns:repeat(7,1fr)}
+/* 달력 */
+.cw{background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
+.chead{display:grid;grid-template-columns:repeat(7,1fr);background:var(--s2);border-bottom:1px solid var(--bd)}
+.chc{text-align:center;padding:9px 0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--mu)}
+.chc.sun{color:#dc2626}.chc.sat{color:#2563eb}
+.cbody{display:grid;grid-template-columns:repeat(7,1fr)}
 
-/* ===== 날짜 셀 - 핵심 로직 ===== */
-.cell{
-  border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);
-  min-height:120px;padding:8px;position:relative;
-  /* 기본: 비활성, 클릭 불가 */
-  cursor:default;
-  pointer-events:none;
-  transition:background .12s;
-}
+/* 날짜 셀 */
+.cell{border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);min-height:118px;padding:8px;position:relative;cursor:default;pointer-events:none;transition:background .12s}
 .cell:nth-child(7n){border-right:none}
+.cell.off{opacity:.18}
+.cell.holiday{background:#fff1f2;opacity:.5}
+.cell.view-only{pointer-events:none}
+.cell.available{background:#eff6ff;cursor:pointer;pointer-events:auto}
+.cell.available:hover{background:#dbeafe}
+.cell.maxed{background:#fff1f2;opacity:.7;pointer-events:none}
+.cell.booked{background:#f0fdf4;pointer-events:auto}
+.cell.is-sun .dnum{color:#dc2626}
+.cell.is-sat .dnum{color:#2563eb}
+.cell.is-today .dnum{background:var(--acc);color:#fff;border-radius:50%}
+.cell.holiday .dnum{color:#dc2626}
+.dnum{font-size:13px;font-weight:600;width:25px;height:25px;display:flex;align-items:center;justify-content:center;margin-bottom:3px;color:var(--tx)}
+.hollbl{font-size:10px;color:#dc2626;margin-bottom:2px;font-weight:500}
+.sbadge{position:absolute;top:8px;right:8px;font-size:10px;color:var(--mu)}
+.sbadge.full{color:#dc2626;font-weight:700}
 
-/* 비활성 (간담회 없는 날, 범위 밖, 과거) */
-.cell.off{opacity:.2}
+/* 이름 칩 */
+.chips{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+.chip{display:flex;align-items:center;padding:3px 7px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid transparent;gap:3px}
+.chip.pangyo{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.chip.yongin{background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe}
+.chip.gongju{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+.chip.daejeon{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+.cname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.csite{font-size:9px;opacity:.65;flex-shrink:0}
+.cdel{background:none;border:none;cursor:pointer;color:inherit;opacity:.45;font-size:14px;line-height:1;padding:0;margin-left:auto;flex-shrink:0;pointer-events:auto}
+.cdel:hover{opacity:1}
+.ahint{margin-top:4px;font-size:10px;color:#2563eb;opacity:.85}
+.flbl{margin-top:4px;font-size:10px;color:#dc2626;font-weight:700}
 
-/* 공휴일 */
-.cell.holiday{background:rgba(255,95,126,.06);opacity:.4}
-
-/* 간담회 날이지만 열람만 (미로그인, 타 사업장) */
-.cell.view-only{background:rgba(79,142,247,.03);pointer-events:none}
-
-/* ★ 신청 가능: 클릭 허용 ★ */
-.cell.available{
-  background:rgba(79,142,247,.08);
-  cursor:pointer;
-  pointer-events:auto; /* 클릭 활성화 */
-}
-.cell.available:hover{background:rgba(79,142,247,.16)}
-
-/* 마감 (4/4): 클릭 불가 */
-.cell.maxed{background:rgba(255,95,126,.05);opacity:.65;pointer-events:none}
-
-/* 내가 신청한 날: × 버튼 클릭 허용 */
-.cell.booked{background:rgba(45,184,122,.08);pointer-events:auto}
-
-/* 요일별 날짜 색상 */
-.cell.is-sun .date-num{color:var(--red)}
-.cell.is-sat .date-num{color:var(--acc)}
-.cell.is-today .date-num{background:var(--acc);color:#fff;border-radius:50%}
-.cell.holiday .date-num{color:var(--red)}
-
-.date-num{
-  font-size:13px;font-weight:600;
-  width:25px;height:25px;
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:3px;
-}
-.hol-label{font-size:10px;color:var(--red);margin-bottom:2px;font-weight:500}
-.slot-badge{position:absolute;top:8px;right:8px;font-size:10px;color:var(--mu)}
-.slot-badge.full{color:var(--red);font-weight:700}
-
-/* ===== 신청자 이름 칩 ===== */
-.chip-list{display:flex;flex-direction:column;gap:2px;margin-top:2px}
-.chip{
-  display:flex;align-items:center;padding:3px 7px;
-  border-radius:6px;font-size:11px;font-weight:500;
-  border:1px solid transparent;gap:3px;
-}
-.chip.pangyo {background:rgba(79,142,247,.18);color:#3a80f5;border-color:rgba(79,142,247,.32)}
-.chip.yongin {background:rgba(167,139,250,.18);color:#9270f5;border-color:rgba(167,139,250,.32)}
-.chip.gongju {background:rgba(45,184,122,.18);color:#1a9c62;border-color:rgba(45,184,122,.32)}
-.chip.daejeon{background:rgba(247,135,79,.18);color:#d4630b;border-color:rgba(247,135,79,.32)}
-.chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.chip-site{font-size:9px;opacity:.65;flex-shrink:0}
-/* 취소 버튼: 본인 신청에만 표시, pointer-events:auto 필수 */
-.chip-del{
-  background:none;border:none;cursor:pointer;
-  color:inherit;opacity:.45;font-size:14px;line-height:1;
-  padding:0;margin-left:auto;flex-shrink:0;
-  pointer-events:auto; /* 부모가 none이어도 버튼은 동작 */
-}
-.chip-del:hover{opacity:1}
-.apply-hint{margin-top:4px;font-size:10px;color:var(--acc);opacity:.85}
-.full-label{margin-top:4px;font-size:10px;color:var(--red);font-weight:700}
-
-/* ===== 토스트 ===== */
-.toast{
-  position:fixed;bottom:18px;left:50%;
-  transform:translateX(-50%) translateY(64px);
-  background:var(--s1);border:1px solid var(--bd);
-  border-radius:10px;padding:10px 18px;font-size:13px;
-  z-index:400;transition:transform .25s ease;white-space:nowrap;
-  box-shadow:0 4px 16px rgba(0,0,0,.3);
-}
-.toast.show{transform:translateX(-50%) translateY(0)}
-.toast.ok{border-color:var(--ok);color:var(--ok)}
-.toast.err{border-color:var(--red);color:var(--red)}
-
-/* ===== 반응형 ===== */
 @media(max-width:640px){
-  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .sgrid{grid-template-columns:repeat(2,1fr)}
   .cell{min-height:80px;padding:5px}
-  .date-num{font-size:12px;width:22px;height:22px}
+  .dnum{font-size:12px;width:22px;height:22px}
   .chip{font-size:10px;padding:2px 5px}
-  .cal-ctrl{flex-direction:column;align-items:flex-start}
-  .guide-grid{grid-template-columns:1fr}
-  .slot-badge{display:none}
+  .cctrl{flex-direction:column;align-items:flex-start}
+  .ggrid{grid-template-columns:1fr}
+  .sbadge{display:none}
 }
 </style>
 </head>
 <body>
 
 <!-- 로딩 -->
-<div class="loading" id="loadingScreen">
-  <div class="spinner"></div>
-  <div class="loading-msg">신청 현황을 불러오는 중...</div>
+<div class="iscreen" id="isc">
+  <div class="bspin"></div>
+  <div class="imsg">신청 현황을 불러오는 중...</div>
 </div>
 
-<!-- 헤더 -->
-<header>
-  <div class="logo">연구소장 <em>간담회</em> 신청 시스템</div>
-  <div class="hright" id="headerRight">
-    <button class="btn btn-p btn-sm" onclick="openLogin()">로그인</button>
-  </div>
-</header>
+<div id="main" style="display:none">
 
-<!-- 로그인 모달 -->
-<div class="overlay" id="loginModal">
-  <div class="modal">
-    <h3>간담회 신청 로그인</h3>
-    <p class="modal-sub">성함과 소속 사업장을 입력하세요.</p>
-    <div class="fg">
-      <label>성명</label>
-      <input type="text" id="inputName" placeholder="홍길동" maxlength="10"
-             onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <div class="fg">
-      <label>소속 사업장</label>
-      <select id="inputSite">
-        <option value="">— 선택하세요 —</option>
-        <option value="pangyo">판교</option>
-        <option value="yongin">용인</option>
-        <option value="gongju">공주</option>
-        <option value="daejeon">대전</option>
-      </select>
-    </div>
-    <button class="btn btn-p" style="width:100%;margin-top:6px" onclick="doLogin()">로그인</button>
-  </div>
-</div>
-
-<!-- 신청 확인 모달 -->
-<div class="overlay" id="applyModal">
-  <div class="modal" style="max-width:360px">
-    <h3 id="applyDateTitle"></h3>
-    <p class="modal-sub" id="applyDateSub"></p>
-    <div class="apply-info">
-      <span class="lb">신청자</span><span class="vl" id="applyUserName"></span>
-      <span style="color:var(--bd)">|</span>
-      <span class="lb">사업장</span><span class="vl" id="applyUserSite"></span>
-    </div>
-    <div class="apply-warn" id="applyWarn"></div>
-    <div class="modal-btns">
-      <button class="btn btn-c" onclick="closeApply()">취소</button>
-      <button class="btn btn-p" id="applyConfirmBtn" onclick="confirmApply()">신청 확정</button>
+  <!-- 헤더 -->
+  <div class="hdr">
+    <div class="logo">연구소장 <em>간담회</em> 신청 시스템</div>
+    <div class="hright" id="hright">
+      <button class="btn btn-p btn-sm" onclick="openLogin()">로그인</button>
     </div>
   </div>
-</div>
 
-<div class="toast" id="toast"></div>
+  <!-- 토스트 (인라인, fixed 미사용) -->
+  <div class="toast-bar" id="toast"></div>
 
-<!-- 본문 -->
-<div class="wrap">
-
-  <!-- 신청 안내 -->
-  <div class="guide">
-    <div class="guide-title">📋 신청 방법 안내</div>
-    <div class="guide-grid">
-
-      <div class="guide-box">
-        <strong>신청 절차</strong>
-        <div class="g-step">
-          <div class="g-row"><div class="g-num">1</div><span>우측 상단 <b>로그인</b> → 성명·사업장 입력</span></div>
-          <div class="g-row"><div class="g-num">2</div><span>달력에서 <b>파란색 활성 날짜</b> 클릭</span></div>
-          <div class="g-row"><div class="g-num">3</div><span>팝업에서 <b>신청 확정</b> → 이름이 달력에 표시</span></div>
-          <div class="g-row"><div class="g-num">4</div><span>취소: 본인 이름 옆 <b>× 버튼</b> (본인만 가능)</span></div>
-        </div>
+  <!-- 로그인 모달 (인라인 플로우) -->
+  <div class="modal-wrap" id="loginModal">
+    <div class="modal">
+      <h3>간담회 신청 로그인</h3>
+      <p class="modal-sub">성함과 소속 사업장을 입력하세요.</p>
+      <div class="fg">
+        <label>성명</label>
+        <input type="text" id="iName" placeholder="홍길동" maxlength="10"
+               onkeydown="if(event.key==='Enter')doLogin()">
       </div>
+      <div class="fg">
+        <label>소속 사업장</label>
+        <select id="iSite">
+          <option value="">— 선택하세요 —</option>
+          <option value="pangyo">판교</option>
+          <option value="yongin">용인</option>
+          <option value="gongju">공주</option>
+          <option value="daejeon">대전</option>
+        </select>
+      </div>
+      <button class="btn btn-p" style="width:100%;margin-top:6px" onclick="doLogin()">로그인</button>
+    </div>
+  </div>
 
-      <div class="guide-box">
-        <strong>사업장별 간담회 요일</strong>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-top:2px">
-          <div style="display:flex;align-items:center;gap:7px">
-            <span style="width:7px;height:7px;border-radius:50%;background:var(--c-py);display:inline-block;flex-shrink:0"></span>
-            <span><span style="color:var(--c-py);font-weight:600">판교·용인</span> — 매주 <b>월요일·금요일</b></span>
+  <!-- 신청 확인 모달 (인라인 플로우) -->
+  <div class="modal-wrap" id="applyModal">
+    <div class="modal" style="max-width:360px">
+      <h3 id="applyTitle"></h3>
+      <p class="modal-sub" id="applySub"></p>
+      <div class="ainfo">
+        <span class="lb">신청자</span><span class="vl" id="applyName"></span>
+        <span style="color:var(--bd)">|</span>
+        <span class="lb">사업장</span><span class="vl" id="applySite"></span>
+      </div>
+      <div class="awarn" id="applyWarn"></div>
+      <div class="mbtns">
+        <button class="btn btn-c" onclick="closeApply()">취소</button>
+        <button class="btn btn-p" id="applyOk" onclick="confirmApply()">신청 확정</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- 가이드 -->
+    <div class="guide">
+      <div class="gtitle">📋 신청 방법 안내</div>
+      <div class="ggrid">
+        <div class="gbox"><b>신청 절차</b>
+          <div class="grow"><div class="gn">1</div><span>우측 상단 <b>로그인</b> 후 성명·사업장 입력</span></div>
+          <div class="grow"><div class="gn">2</div><span>달력의 <b>파란색 날짜</b> 클릭 → 신청 확정</span></div>
+          <div class="grow"><div class="gn">3</div><span>취소: 본인 이름 옆 <b>× 버튼</b> (즉시 반영)</span></div>
+        </div>
+        <div class="gbox"><b>사업장별 요일</b>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:3px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block;flex-shrink:0"></span>
+              <span><span style="color:#2563eb;font-weight:600">판교·용인</span> — 매주 <b>월·금요일</b></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;flex-shrink:0"></span>
+              <span><span style="color:#16a34a;font-weight:600">공주·대전</span> — 매월 <b>1·3번째 수요일</b></span>
+            </div>
+            <div style="font-size:11px;color:var(--mu);margin-top:2px">운영 기간: 2026년 6월 ~ 8월</div>
           </div>
-          <div style="display:flex;align-items:center;gap:7px">
-            <span style="width:7px;height:7px;border-radius:50%;background:var(--c-gj);display:inline-block;flex-shrink:0"></span>
-            <span><span style="color:var(--c-gj);font-weight:600">공주·대전</span> — 매월 <b>1·3번째 수요일</b></span>
-          </div>
-          <div style="font-size:11px;color:var(--mu);margin-top:3px">운영 기간: 2026년 6월 ~ 8월</div>
+        </div>
+        <div class="gbox"><b>유의사항</b>
+          <div class="grow"><span style="color:#dc2626;margin-right:3px;font-weight:700">·</span><span>기간 내 <b>1인 1회</b> 신청</span></div>
+          <div class="grow"><span style="color:#dc2626;margin-right:3px;font-weight:700">·</span><span>회당 최대 <b>4명</b> 정원</span></div>
+          <div class="grow"><span style="color:#dc2626;margin-right:3px;font-weight:700">·</span><span>모든 신청자 이름 달력에 공개</span></div>
+          <div class="grow"><span style="color:#dc2626;margin-right:3px;font-weight:700">·</span><span>공휴일 신청 불가 / 본인만 취소</span></div>
         </div>
       </div>
+      <div class="tags">
+        <span class="tag">📅 2026. 6~8월</span>
+        <span class="tag">👥 회당 4명</span>
+        <span class="tag r">🔴 공휴일 제외</span>
+        <span class="tag g">✅ 실시간 전체 공유</span>
+        <span class="tag r">🔒 본인만 취소</span>
+      </div>
+    </div>
 
-      <div class="guide-box">
-        <strong>유의사항</strong>
-        <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px">
-          <div class="g-row"><span style="color:var(--red);margin-right:3px;font-weight:700">·</span><span>기간 내 <b>1인 1회</b> 신청 가능</span></div>
-          <div class="g-row"><span style="color:var(--red);margin-right:3px;font-weight:700">·</span><span>회당 최대 <b>4명</b> 정원 (마감 시 신청 불가)</span></div>
-          <div class="g-row"><span style="color:var(--red);margin-right:3px;font-weight:700">·</span><span>모든 신청자 이름이 달력에 <b>공개</b></span></div>
-          <div class="g-row"><span style="color:var(--red);margin-right:3px;font-weight:700">·</span><span>공휴일은 신청 불가</span></div>
-          <div class="g-row"><span style="color:var(--red);margin-right:3px;font-weight:700">·</span><span>타 사업장 날짜 신청 불가</span></div>
+    <!-- 통계 -->
+    <div class="sgrid">
+      <div class="scard"><div class="slbl">전체 신청</div><div class="sval" id="sTotal">0</div></div>
+      <div class="scard" style="border-color:#bfdbfe">
+        <div class="slbl" style="color:#2563eb">판교 / 용인</div>
+        <div class="sval" id="sPY">0</div>
+      </div>
+      <div class="scard" style="border-color:#bbf7d0">
+        <div class="slbl" style="color:#16a34a">공주 / 대전</div>
+        <div class="sval" id="sGD">0</div>
+      </div>
+      <div class="scard">
+        <div class="slbl">내 신청일</div>
+        <div class="sval" id="sMine" style="font-size:14px;padding-top:5px;font-weight:500">—</div>
+      </div>
+    </div>
+
+    <!-- 달력 컨트롤 -->
+    <div class="cctrl">
+      <div class="mnav">
+        <button class="nbtn" id="btnPrev" onclick="chM(-1)">‹</button>
+        <div class="mtitle" id="mTitle"></div>
+        <button class="nbtn" id="btnNext" onclick="chM(1)">›</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="leg">
+          <div class="li"><div class="ld" style="background:#2563eb"></div>판교·용인 (월·금)</div>
+          <div class="li"><div class="ld" style="background:#16a34a"></div>공주·대전 (1·3주 수)</div>
         </div>
+        <button class="btn-ref" id="btnRef" onclick="doRefresh()" title="현황 새로고침">↻</button>
       </div>
+    </div>
 
-    </div>
-    <div class="tags">
-      <span class="tag">📅 2026년 6~8월 운영</span>
-      <span class="tag">👥 회당 4명 정원</span>
-      <span class="tag r">🔴 공휴일 제외</span>
-      <span class="tag g">✅ 실시간 전체 공유</span>
-      <span class="tag r">🔒 본인만 취소 가능</span>
-    </div>
-  </div>
-
-  <!-- 통계 -->
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-label">전체 신청</div>
-      <div class="stat-val" id="statTotal">0</div>
-    </div>
-    <div class="stat-card" style="border-color:rgba(79,142,247,.4)">
-      <div class="stat-label" style="color:var(--c-py)">판교 / 용인</div>
-      <div class="stat-val" id="statPY">0</div>
-    </div>
-    <div class="stat-card" style="border-color:rgba(45,184,122,.4)">
-      <div class="stat-label" style="color:var(--c-gj)">공주 / 대전</div>
-      <div class="stat-val" id="statGD">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">내 신청일</div>
-      <div class="stat-val" id="statMine" style="font-size:14px;padding-top:5px;font-weight:500">—</div>
-    </div>
-  </div>
-
-  <!-- 달력 컨트롤 -->
-  <div class="cal-ctrl">
-    <div class="month-nav">
-      <button class="month-btn" id="btnPrev" onclick="changeMonth(-1)">‹</button>
-      <div class="month-title" id="monthTitle"></div>
-      <button class="month-btn" id="btnNext" onclick="changeMonth(1)">›</button>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div class="legend">
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-py)"></div>판교·용인 (월·금)</div>
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-gj)"></div>공주·대전 (1·3주 수)</div>
+    <!-- 달력 -->
+    <div class="cw">
+      <div class="chead">
+        <div class="chc sun">일</div><div class="chc">월</div><div class="chc">화</div>
+        <div class="chc">수</div><div class="chc">목</div><div class="chc">금</div>
+        <div class="chc sat">토</div>
       </div>
-      <button class="btn-ref" id="btnRefresh" onclick="doRefresh()" title="현황 새로고침">↻</button>
+      <div class="cbody" id="calBody"></div>
     </div>
   </div>
-
-  <!-- 달력 -->
-  <div class="cal-wrap">
-    <div class="cal-head">
-      <div class="cal-head-cell sun">일</div>
-      <div class="cal-head-cell">월</div>
-      <div class="cal-head-cell">화</div>
-      <div class="cal-head-cell">수</div>
-      <div class="cal-head-cell">목</div>
-      <div class="cal-head-cell">금</div>
-      <div class="cal-head-cell sat">토</div>
-    </div>
-    <div class="cal-body" id="calBody"></div>
-  </div>
-
-</div><!-- /wrap -->
+</div>
 
 <script>
-/* =====================================================
-   설정값
-===================================================== */
-const YEAR = 2026;
-const M_START = 6;
-const M_END   = 8;
-const MAX_PER_DAY = 4;
+const YEAR=2026,MS=6,ME=8,MAX=4;
+const HOL={'2026-6-6':'현충일','2026-8-15':'광복절'};
+const BIN_KEY='$2a$10$Rc9QTVaSi1qgHb0pz6nZyu2fKwJGoluXkxoo5zHNThLZ4raV8DOkK';
+const BIN_ID='6a027ce9adc21f119a87e4f9';
+const BIN_URL=`https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const UK='gdm_v3';
+let cY=YEAR,cM=MS,user=null,pendKey=null,DB={};
 
-// 2026 공휴일
-const HOLIDAYS = {
-  '2026-6-6':  '현충일',
-  '2026-8-15': '광복절',
-};
-
-// JSONBin (공유 DB)
-const BIN_KEY = '$2a$10$Rc9QTVaSi1qgHb0pz6nZyu2fKwJGoluXkxoo5zHNThLZ4raV8DOkK';
-const BIN_ID  = '6a027ce9adc21f119a87e4f9';
-const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-
-/* =====================================================
-   상태
-===================================================== */
-let curYear  = YEAR;
-let curMonth = M_START;
-let currentUser = null;   // { name, site }
-let pendingKey  = null;   // 신청 대기 중인 날짜 키
-let DB = {};              // { "2026-6-1": [{name,site,uid}, ...] }
-
-const SESSION_KEY = 'gandamhoe_user_v3';
-
-/* =====================================================
-   JSONBin API
-===================================================== */
-async function dbLoad() {
-  try {
-    const res = await fetch(BIN_URL + '/latest', {
-      headers: { 'X-Master-Key': BIN_KEY, 'X-Bin-Meta': 'false' }
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    // JSONBin 응답: { record: {...} } 또는 직접 객체
-    const raw = (data && data.record !== undefined) ? data.record : data;
-    DB = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
-  } catch(e) {
-    console.error('[dbLoad]', e.message);
-    // 실패해도 기존 DB 유지 (화면 초기화 방지)
-  }
+async function dbLoad(){
+  try{
+    const r=await fetch(BIN_URL+'/latest',{headers:{'X-Master-Key':BIN_KEY,'X-Bin-Meta':'false'}});
+    if(!r.ok)throw new Error(r.status);
+    const d=await r.json();
+    const raw=(d&&d.record!==undefined)?d.record:d;
+    DB=(raw&&typeof raw==='object'&&!Array.isArray(raw))?raw:{};
+  }catch(e){console.warn('dbLoad',e.message)}
 }
 
-async function dbSave() {
-  const res = await fetch(BIN_URL, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': BIN_KEY,
-    },
-    body: JSON.stringify(DB),
-  });
-  if (!res.ok) throw new Error('저장 실패 HTTP ' + res.status);
+async function dbSave(){
+  const r=await fetch(BIN_URL,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':BIN_KEY},body:JSON.stringify(DB)});
+  if(!r.ok)throw new Error(r.status);
 }
 
-/* =====================================================
-   헬퍼 함수
-===================================================== */
-function dateKey(y, m, d)  { return `${y}-${m}-${d}`; }
-function makeUid(u)        { return `${u.name}__${u.site}`; }
-function getApps(y, m, d)  { return DB[dateKey(y,m,d)] || []; }
+const dk=(y,m,d)=>`${y}-${m}-${d}`;
+const mkUid=u=>`${u.name}__${u.site}`;
+const getApps=(y,m,d)=>DB[dk(y,m,d)]||[];
+const SN={pangyo:'판교',yongin:'용인',gongju:'공주',daejeon:'대전'};
+const sn=s=>SN[s]||s;
 
-const SITE_NAME = { pangyo:'판교', yongin:'용인', gongju:'공주', daejeon:'대전' };
-const siteName  = s => SITE_NAME[s] || s;
+function todayInfo(){const t=new Date();return{y:t.getFullYear(),m:t.getMonth()+1,d:t.getDate()}}
+function inRange(y,m){return y===YEAR&&m>=MS&&m<=ME}
+function isPast(y,m,d){const t=todayInfo();if(y>t.y)return false;if(y<t.y)return true;if(m>t.m)return false;if(m<t.m)return true;return d<t.d}
+function getGrp(y,m,d){const w=new Date(y,m-1,d).getDay();if(w===1||w===5)return'py';if(w===3&&[1,3].includes(Math.ceil(d/7)))return'gd';return null}
+function uGrp(s){if(s==='pangyo'||s==='yongin')return'py';if(s==='gongju'||s==='daejeon')return'gd';return null}
+function myBKey(){if(!user)return null;const id=mkUid(user);for(const k in DB)if(DB[k].some(a=>a.uid===id))return k;return null}
 
-function todayInfo() {
-  const t = new Date();
-  return { y: t.getFullYear(), m: t.getMonth()+1, d: t.getDate() };
-}
-
-function isInRange(y, m) {
-  return (y === YEAR && m >= M_START && m <= M_END);
-}
-
-// 오늘보다 과거인지 (미래 날짜면 false)
-function isPast(y, m, d) {
-  const t = todayInfo();
-  if (y > t.y) return false;
-  if (y < t.y) return true;
-  if (m > t.m) return false;
-  if (m < t.m) return true;
-  return d < t.d;
-}
-
-// 날짜의 간담회 그룹 반환
-// 'py' = 판교/용인 (월=1, 금=5)
-// 'gd' = 공주/대전 (1·3번째 수=3)
-// null = 간담회 없음
-function getSchedGroup(y, m, d) {
-  const dow = new Date(y, m-1, d).getDay();
-  if (dow === 1 || dow === 5) return 'py';
-  if (dow === 3) {
-    const weekNum = Math.ceil(d / 7);
-    if (weekNum === 1 || weekNum === 3) return 'gd';
-  }
-  return null;
-}
-
-// 사용자 사업장의 그룹
-function getUserGroup(site) {
-  if (site === 'pangyo' || site === 'yongin') return 'py';
-  if (site === 'gongju' || site === 'daejeon') return 'gd';
-  return null;
-}
-
-// 현재 유저가 기간 내 신청한 날짜 키 (없으면 null)
-function getMyBookedKey() {
-  if (!currentUser) return null;
-  const uid = makeUid(currentUser);
-  for (const k in DB) {
-    if (DB[k].some(a => a.uid === uid)) return k;
-  }
-  return null;
-}
-
-/* =====================================================
-   로그인 / 로그아웃
-===================================================== */
-function openLogin() {
-  document.getElementById('loginModal').classList.add('open');
-}
-
-function doLogin() {
-  const name = document.getElementById('inputName').value.trim();
-  const site = document.getElementById('inputSite').value;
-  if (!name) { showToast('성명을 입력해주세요.', 'err'); return; }
-  if (!site) { showToast('사업장을 선택해주세요.', 'err'); return; }
-
-  currentUser = { name, site };
-  // sessionStorage: 탭이 열려 있는 동안 유지, 새 탭에서는 재로그인
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser)); } catch(e) {}
-
+function showModal(id){
   document.getElementById('loginModal').classList.remove('open');
-  updateHeader();
-  render();
-  updateStats();
-  showToast(`${name}님, 환영합니다!`, 'ok');
+  document.getElementById('applyModal').classList.remove('open');
+  if(id)document.getElementById(id).classList.add('open');
 }
 
-function updateHeader() {
-  if (!currentUser) {
-    document.getElementById('headerRight').innerHTML =
-      `<button class="btn btn-p btn-sm" onclick="openLogin()">로그인</button>`;
+function openLogin(){showModal('loginModal')}
+
+function doLogin(){
+  const name=document.getElementById('iName').value.trim();
+  const site=document.getElementById('iSite').value;
+  if(!name){showToast('성명을 입력해주세요.','err');return}
+  if(!site){showToast('사업장을 선택해주세요.','err');return}
+  user={name,site};
+  try{sessionStorage.setItem(UK,JSON.stringify(user))}catch(e){}
+  showModal(null);
+  setHdr();render();updateStats();
+  showToast(name+'님, 환영합니다!','ok');
+}
+
+function setHdr(){
+  if(!user){
+    document.getElementById('hright').innerHTML='<button class="btn btn-p btn-sm" onclick="openLogin()">로그인</button>';
     return;
   }
-  const { name, site } = currentUser;
-  document.getElementById('headerRight').innerHTML = `
-    <div class="ubadge">
-      <div class="udot"></div>
-      <span>${name}&nbsp;<span style="color:var(--mu);font-size:11px">${siteName(site)}</span></span>
-    </div>
-    <button class="btn-lo" onclick="doLogout()">로그아웃</button>`;
+  document.getElementById('hright').innerHTML=
+    '<div class="ubadge"><div class="udot"></div><span>'+user.name+
+    ' <span style="color:var(--mu);font-size:11px">'+sn(user.site)+'</span></span></div>'+
+    '<button class="btn-lo" onclick="doLogout()">로그아웃</button>';
 }
 
-function doLogout() {
-  currentUser = null;
-  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
-  updateHeader();
-  render();
-  updateStats();
+function doLogout(){
+  user=null;
+  try{sessionStorage.removeItem(UK)}catch(e){}
+  setHdr();render();updateStats();
 }
 
-/* =====================================================
-   새로고침
-===================================================== */
-async function doRefresh() {
-  const btn = document.getElementById('btnRefresh');
-  btn.classList.add('spinning');
-  await dbLoad();
-  render();
-  updateStats();
-  btn.classList.remove('spinning');
-  showToast('현황이 갱신되었습니다.', 'ok');
+async function doRefresh(){
+  const b=document.getElementById('btnRef');b.classList.add('spinning');
+  await dbLoad();render();updateStats();
+  b.classList.remove('spinning');showToast('현황이 갱신되었습니다.','ok');
 }
 
-/* =====================================================
-   달력 월 이동
-===================================================== */
-function changeMonth(delta) {
-  let nm = curMonth + delta;
-  let ny = curYear;
-  if (nm > 12) { nm = 1; ny++; }
-  if (nm < 1)  { nm = 12; ny--; }
-  if (!isInRange(ny, nm)) return;
-  curYear  = ny;
-  curMonth = nm;
-  render();
+function chM(d){
+  let nm=cM+d,ny=cY;
+  if(nm>12){nm=1;ny++}if(nm<1){nm=12;ny--}
+  if(!inRange(ny,nm))return;
+  cY=ny;cM=nm;render();
 }
 
-/* =====================================================
-   달력 렌더링
-===================================================== */
-function render() {
-  const y = curYear, m = curMonth;
-  const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  document.getElementById('monthTitle').textContent = `${y}년 ${MONTH_NAMES[m-1]}`;
+function render(){
+  const y=cY,m=cM;
+  const MN=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('mTitle').textContent=y+'년 '+MN[m-1];
+  document.getElementById('btnPrev').disabled=(m<=MS);
+  document.getElementById('btnNext').disabled=(m>=ME);
+  const body=document.getElementById('calBody');body.innerHTML='';
+  const fd=new Date(y,m-1,1).getDay(),td=new Date(y,m,0).getDate(),t=todayInfo();
 
-  // 이전/다음 버튼 비활성화
-  document.getElementById('btnPrev').disabled = (m <= M_START);
-  document.getElementById('btnNext').disabled = (m >= M_END);
+  for(let i=0;i<fd;i++){const e=document.createElement('div');e.className='cell off';body.appendChild(e)}
 
-  const body = document.getElementById('calBody');
-  body.innerHTML = '';
+  for(let d=1;d<=td;d++){
+    const cell=document.createElement('div');
+    const dow=new Date(y,m-1,d).getDay();
+    const key=dk(y,m,d),hol=HOL[key]||null,apps=getApps(y,m,d);
+    const isFull=apps.length>=MAX,grp=getGrp(y,m,d);
+    const isToday=(y===t.y&&m===t.m&&d===t.d),past=isPast(y,m,d);
+    const myUid=user?mkUid(user):null;
+    const myApp=myUid?apps.some(a=>a.uid===myUid):false;
+    const myGrp=user?uGrp(user.site):null;
+    const isMyDay=(grp!==null&&grp===myGrp);
 
-  const firstDow  = new Date(y, m-1, 1).getDay();   // 1일 요일
-  const totalDays = new Date(y, m, 0).getDate();      // 해당 월 총 일수
-  const today     = todayInfo();
+    let st;
+    if(past||grp===null)st='off';
+    else if(hol)st='holiday';
+    else if(!user||!isMyDay)st='view-only';
+    else if(myApp)st='booked';
+    else if(isFull)st='maxed';
+    else st='available';
 
-  // 앞 빈칸
-  for (let i = 0; i < firstDow; i++) {
-    const el = document.createElement('div');
-    el.className = 'cell off';
-    body.appendChild(el);
-  }
+    cell.className='cell '+st;
+    if(dow===0)cell.classList.add('is-sun');
+    if(dow===6)cell.classList.add('is-sat');
+    if(isToday)cell.classList.add('is-today');
 
-  // 날짜 셀
-  for (let d = 1; d <= totalDays; d++) {
-    const cell = document.createElement('div');
-    const dow   = new Date(y, m-1, d).getDay();
-    const key   = dateKey(y, m, d);
-    const hol   = HOLIDAYS[key] || null;
-    const apps  = getApps(y, m, d);
-    const isFull = apps.length >= MAX_PER_DAY;
-    const grp   = getSchedGroup(y, m, d);
-    const isToday = (y === today.y && m === today.m && d === today.d);
-    const past  = isPast(y, m, d);
+    const dn=document.createElement('div');dn.className='dnum';dn.textContent=d;cell.appendChild(dn);
+    if(hol){const h=document.createElement('div');h.className='hollbl';h.textContent=hol;cell.appendChild(h)}
 
-    // 현재 로그인 유저 관련
-    const myUid    = currentUser ? makeUid(currentUser) : null;
-    const myApplied = myUid ? apps.some(a => a.uid === myUid) : false;
-    const myGroup  = currentUser ? getUserGroup(currentUser.site) : null;
-    const isMyScheduleDay = (grp !== null && grp === myGroup);
+    if(grp&&!hol){
+      const sb=document.createElement('div');
+      sb.className='sbadge'+(isFull?' full':'');
+      sb.textContent=apps.length+'/'+MAX;cell.appendChild(sb);
 
-    /* ─── 셀 상태 결정 ───────────────────────────
-       우선순위:
-       1. 과거 or 간담회 없는 날 → off (완전 비활성)
-       2. 공휴일               → holiday (비활성)
-       3. 미로그인 or 타사업장  → view-only (열람만)
-       4. 내가 신청한 날        → booked (× 버튼만)
-       5. 마감 (4명)           → maxed (비활성)
-       6. 신청 가능             → available ★클릭허용★
-    ──────────────────────────────────────────── */
-    let cellState;
-    if (past || grp === null) {
-      cellState = 'off';
-    } else if (hol) {
-      cellState = 'holiday';
-    } else if (!currentUser || !isMyScheduleDay) {
-      cellState = 'view-only';
-    } else if (myApplied) {
-      cellState = 'booked';
-    } else if (isFull) {
-      cellState = 'maxed';
-    } else {
-      cellState = 'available';
-    }
-
-    cell.className = `cell ${cellState}`;
-    if (dow === 0) cell.classList.add('is-sun');
-    if (dow === 6) cell.classList.add('is-sat');
-    if (isToday)   cell.classList.add('is-today');
-
-    // 날짜 숫자
-    const dateEl = document.createElement('div');
-    dateEl.className = 'date-num';
-    dateEl.textContent = d;
-    cell.appendChild(dateEl);
-
-    // 공휴일 이름
-    if (hol) {
-      const holEl = document.createElement('div');
-      holEl.className = 'hol-label';
-      holEl.textContent = hol;
-      cell.appendChild(holEl);
-    }
-
-    // 간담회 날 콘텐츠 (공휴일 제외)
-    if (grp && !hol) {
-      // 슬롯 배지 (X/4)
-      const badge = document.createElement('div');
-      badge.className = 'slot-badge' + (isFull ? ' full' : '');
-      badge.textContent = `${apps.length}/${MAX_PER_DAY}`;
-      cell.appendChild(badge);
-
-      // 신청자 이름 목록
-      const chipList = document.createElement('div');
-      chipList.className = 'chip-list';
-
-      apps.forEach(a => {
-        const chip = document.createElement('div');
-        chip.className = `chip ${a.site}`;
-
-        const nameEl = document.createElement('span');
-        nameEl.className = 'chip-name';
-        nameEl.textContent = a.name;
-        chip.appendChild(nameEl);
-
-        const siteEl = document.createElement('span');
-        siteEl.className = 'chip-site';
-        siteEl.textContent = `(${siteName(a.site)})`;
-        chip.appendChild(siteEl);
-
-        // 본인 신청에만 × 버튼 표시
-        if (myUid && a.uid === myUid) {
-          const delBtn = document.createElement('button');
-          delBtn.className = 'chip-del';
-          delBtn.title = '내 신청 취소';
-          delBtn.textContent = '×';
-          delBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            doDelete(key, myUid);
-          });
-          chip.appendChild(delBtn);
+      const chips=document.createElement('div');chips.className='chips';
+      apps.forEach(function(a){
+        const chip=document.createElement('div');chip.className='chip '+a.site;
+        const nm=document.createElement('span');nm.className='cname';nm.textContent=a.name;chip.appendChild(nm);
+        const cs=document.createElement('span');cs.className='csite';cs.textContent='('+sn(a.site)+')';chip.appendChild(cs);
+        if(myUid&&a.uid===myUid){
+          const del=document.createElement('button');del.className='cdel';
+          del.title='내 신청 취소';del.textContent='×';
+          del.addEventListener('click',function(e){e.stopPropagation();doDelete(key,myUid)});
+          chip.appendChild(del);
         }
-
-        chipList.appendChild(chip);
+        chips.appendChild(chip);
       });
-      cell.appendChild(chipList);
+      cell.appendChild(chips);
 
-      // 하단 힌트
-      if (!past) {
-        if (cellState === 'available') {
-          const hint = document.createElement('div');
-          hint.className = 'apply-hint';
-          hint.textContent = '＋ 클릭하여 신청';
-          cell.appendChild(hint);
-        } else if (cellState === 'maxed') {
-          const fullEl = document.createElement('div');
-          fullEl.className = 'full-label';
-          fullEl.textContent = '마 감';
-          cell.appendChild(fullEl);
+      if(!past){
+        if(st==='available'){
+          const h=document.createElement('div');h.className='ahint';h.textContent='＋ 클릭하여 신청';cell.appendChild(h);
+        }else if(st==='maxed'){
+          const f=document.createElement('div');f.className='flbl';f.textContent='마  감';cell.appendChild(f);
         }
       }
     }
-
-    // 클릭 이벤트: available 상태만 신청 모달 오픈
-    if (cellState === 'available') {
-      cell.addEventListener('click', () => openApply(y, m, d));
-    }
-
+    if(st==='available')cell.addEventListener('click',function(){openApply(y,m,d)});
     body.appendChild(cell);
   }
 }
 
-/* =====================================================
-   신청 모달
-===================================================== */
-function openApply(y, m, d) {
-  if (!currentUser) { showToast('먼저 로그인해주세요.', 'err'); openLogin(); return; }
-
-  pendingKey = dateKey(y, m, d);
-
-  const DOW_NAMES = ['일','월','화','수','목','금','토'];
-  const dow = new Date(y, m-1, d).getDay();
-  document.getElementById('applyDateTitle').textContent = `${m}월 ${d}일 (${DOW_NAMES[dow]})`;
-  document.getElementById('applyDateSub').textContent   = `${y}년 연구소장 간담회 신청`;
-  document.getElementById('applyUserName').textContent  = currentUser.name;
-  document.getElementById('applyUserSite').textContent  = siteName(currentUser.site);
-
-  const warnEl  = document.getElementById('applyWarn');
-  const confBtn = document.getElementById('applyConfirmBtn');
-  const bookedKey = getMyBookedKey();
-
-  if (bookedKey) {
-    const parts = bookedKey.split('-');
-    warnEl.textContent = `이미 ${parts[1]}월 ${parts[2]}일에 신청 완료되어 있습니다. 해당 날짜에서 × 버튼으로 취소 후 재신청해주세요.`;
-    warnEl.style.display = 'block';
-    confBtn.disabled = true;
-    confBtn.style.opacity = '.4';
-  } else {
-    warnEl.style.display = 'none';
-    confBtn.disabled = false;
-    confBtn.style.opacity = '1';
+function openApply(y,m,d){
+  if(!user){showToast('먼저 로그인해주세요.','err');openLogin();return}
+  pendKey=dk(y,m,d);
+  const DN=['일','월','화','수','목','금','토'];
+  document.getElementById('applyTitle').textContent=m+'월 '+d+'일 ('+DN[new Date(y,m-1,d).getDay()]+')';
+  document.getElementById('applySub').textContent=y+'년 연구소장 간담회 신청';
+  document.getElementById('applyName').textContent=user.name;
+  document.getElementById('applySite').textContent=sn(user.site);
+  const wEl=document.getElementById('applyWarn');
+  const cBtn=document.getElementById('applyOk');
+  const bk=myBKey();
+  if(bk){
+    const p=bk.split('-');
+    wEl.textContent='이미 '+p[1]+'월 '+p[2]+'일에 신청 완료. × 버튼으로 취소 후 재신청하세요.';
+    wEl.style.display='block';cBtn.disabled=true;cBtn.style.opacity='.4';
+  }else{
+    wEl.style.display='none';cBtn.disabled=false;cBtn.style.opacity='1';
   }
-
-  document.getElementById('applyModal').classList.add('open');
+  showModal('applyModal');
 }
 
-function closeApply() {
-  document.getElementById('applyModal').classList.remove('open');
-  pendingKey = null;
-}
+function closeApply(){showModal(null);pendKey=null}
 
-async function confirmApply() {
-  if (!currentUser || !pendingKey) return;
-
-  const btn = document.getElementById('applyConfirmBtn');
-  btn.disabled = true;
-  btn.textContent = '저장 중...';
-
-  try {
-    // 서버 최신 데이터 확인 (중복/마감 방지)
+async function confirmApply(){
+  if(!user||!pendKey)return;
+  const btn=document.getElementById('applyOk');
+  btn.disabled=true;btn.textContent='저장 중...';
+  try{
     await dbLoad();
-
-    const uid = makeUid(currentUser);
-    if (!DB[pendingKey]) DB[pendingKey] = [];
-    const arr = DB[pendingKey];
-
-    if (arr.length >= MAX_PER_DAY) {
-      showToast('방금 마감되었습니다. 다른 날짜를 선택해주세요.', 'err');
-      closeApply(); render(); updateStats();
-      btn.disabled = false; btn.textContent = '신청 확정';
-      return;
+    const uid=mkUid(user);
+    if(!DB[pendKey])DB[pendKey]=[];
+    const arr=DB[pendKey];
+    if(arr.length>=MAX){
+      showToast('방금 마감되었습니다.','err');
+      closeApply();render();updateStats();
+      btn.disabled=false;btn.textContent='신청 확정';return;
     }
-    if (arr.some(a => a.uid === uid)) {
-      showToast('이미 신청하셨습니다.', 'err');
-      closeApply(); render(); updateStats();
-      btn.disabled = false; btn.textContent = '신청 확정';
-      return;
+    if(arr.some(function(a){return a.uid===uid})){
+      showToast('이미 신청하셨습니다.','err');
+      closeApply();render();updateStats();
+      btn.disabled=false;btn.textContent='신청 확정';return;
     }
-
-    // 1) 로컬 DB 즉시 추가 → 화면 바로 갱신
-    arr.push({ name: currentUser.name, site: currentUser.site, uid });
-    closeApply();
-    render();
-    updateStats();
-    showToast('신청이 완료되었습니다! 🎉', 'ok');
-
-    // 2) 서버에 저장 (백그라운드)
+    arr.push({name:user.name,site:user.site,uid:uid});
+    closeApply();render();updateStats();
+    showToast('신청이 완료되었습니다! 🎉','ok');
     await dbSave();
-
-  } catch(e) {
-    console.error('[confirmApply]', e);
-    showToast('저장 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'err');
+  }catch(e){
+    showToast('저장 오류. 잠시 후 다시 시도해주세요.','err');
+    console.error(e);
   }
-
-  btn.disabled = false;
-  btn.textContent = '신청 확정';
+  btn.disabled=false;btn.textContent='신청 확정';
 }
 
-async function doDelete(key, myUid) {
-  if (!currentUser || makeUid(currentUser) !== myUid) {
-    showToast('본인의 신청만 취소할 수 있습니다.', 'err');
-    return;
-  }
-  // 1) 로컬 DB 즉시 수정 → 화면 바로 갱신 (서버 응답 기다리지 않음)
-  if (!DB[key]) return;
-  DB[key] = DB[key].filter(a => a.uid !== myUid);
-  if (DB[key].length === 0) delete DB[key];
-  render();
-  updateStats();
-  showToast('신청이 취소되었습니다.', 'ok');
-
-  // 2) 서버에 저장 (백그라운드)
-  try {
-    await dbSave();
-  } catch(e) {
-    console.error('[doDelete] 서버 저장 실패:', e);
-    showToast('서버 저장 오류. 새로고침 후 확인해주세요.', 'err');
-  }
+async function doDelete(key,myUid){
+  if(!user||mkUid(user)!==myUid){showToast('본인 신청만 취소 가능합니다.','err');return}
+  if(!DB[key])return;
+  /* 1) 로컬 즉시 삭제 → 화면 바로 갱신 */
+  DB[key]=DB[key].filter(function(a){return a.uid!==myUid});
+  if(!DB[key].length)delete DB[key];
+  render();updateStats();
+  showToast('신청이 취소되었습니다.','ok');
+  /* 2) 서버 저장 (백그라운드) */
+  try{await dbSave()}catch(e){showToast('서버 저장 오류. 새로고침 후 확인해주세요.','err')}
 }
 
-/* =====================================================
-   통계 업데이트
-===================================================== */
-function updateStats() {
-  let total = 0, py = 0, gd = 0, mine = '—';
-  const myUid = currentUser ? makeUid(currentUser) : null;
-
-  for (const k in DB) {
-    for (const a of DB[k]) {
-      total++;
-      if (a.site === 'pangyo' || a.site === 'yongin') py++;
-      else gd++;
-      if (myUid && a.uid === myUid) {
-        const p = k.split('-');
-        mine = `${p[1]}월 ${p[2]}일`;
-      }
+function updateStats(){
+  var total=0,py=0,gd=0,mine='—';
+  var myUid=user?mkUid(user):null;
+  for(var k in DB){
+    for(var i=0;i<DB[k].length;i++){
+      var a=DB[k][i];total++;
+      if(a.site==='pangyo'||a.site==='yongin')py++;else gd++;
+      if(myUid&&a.uid===myUid){var p=k.split('-');mine=p[1]+'월 '+p[2]+'일'}
     }
   }
-
-  document.getElementById('statTotal').textContent = total;
-  document.getElementById('statPY').textContent    = py;
-  document.getElementById('statGD').textContent    = gd;
-  document.getElementById('statMine').textContent  = currentUser ? mine : '—';
+  document.getElementById('sTotal').textContent=total;
+  document.getElementById('sPY').textContent=py;
+  document.getElementById('sGD').textContent=gd;
+  document.getElementById('sMine').textContent=user?mine:'—';
 }
 
-/* =====================================================
-   토스트 알림
-===================================================== */
-let toastTimer;
-function showToast(msg, type = 'ok') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast ${type} show`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+var _tt;
+function showToast(msg,type){
+  type=type||'ok';
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast-bar '+type+' show';
+  clearTimeout(_tt);_tt=setTimeout(function(){el.className='toast-bar'},3200);
 }
 
-/* =====================================================
-   초기화
-===================================================== */
-(async () => {
-  // 세션에서 로그인 상태 복원
-  try {
-    const saved = sessionStorage.getItem(SESSION_KEY);
-    if (saved) {
-      currentUser = JSON.parse(saved);
-      updateHeader();
-    }
-  } catch(e) {}
-
-  // DB 로드
+(async function(){
+  try{var s=sessionStorage.getItem(UK);if(s){user=JSON.parse(s);}}catch(e){}
   await dbLoad();
-
-  // 로딩 화면 숨기기
-  document.getElementById('loadingScreen').classList.add('hide');
-
-  // 달력 렌더
-  render();
-  updateStats();
-
-  // 30초마다 자동 갱신
-  setInterval(async () => {
-    await dbLoad();
-    render();
-    updateStats();
-  }, 30000);
+  document.getElementById('isc').classList.add('hide');
+  document.getElementById('main').style.display='block';
+  if(user)setHdr();
+  render();updateStats();
+  setInterval(async function(){await dbLoad();render();updateStats()},30000);
 })();
 </script>
 </body>

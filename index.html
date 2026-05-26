@@ -840,43 +840,40 @@ function closeApply() { openOv(null); pendKey = null; }
 async function confirmApply() {
   if (!currentUser || !pendKey) return;
   var btn = document.getElementById('applyOk');
-  btn.disabled = true; btn.textContent = '저장 중...';
+  var uid  = mkUid(currentUser);
+  var site = currentUser.site;
+  var ak   = aKey(pendKey, site);
+
+  // 로컬 DB로 즉시 중복/마감 체크
+  if (!DB.apps) DB.apps = {};
+  if (!DB.apps[ak]) DB.apps[ak] = [];
+  var arr  = DB.apps[ak];
+  var maxS = getMaxSlots(pendKey, site);
+  if (arr.length >= maxS) {
+    showToast('마감된 날짜입니다.', 'err');
+    closeApply(); render(); return;
+  }
+  if (arr.some(function(a){ return a.uid===uid; })) {
+    showToast('이미 신청하셨습니다.', 'err');
+    closeApply(); render(); return;
+  }
+
+  // 로컬 즉시 반영 → UI 바로 갱신
+  arr.push({ name:currentUser.name, site:site, uid:uid });
+  closeApply(); render(); updateStats();
+  showToast('신청이 완료되었습니다! 🎉', 'ok');
+
+  // 서버 저장 (백그라운드 — 사용자는 기다리지 않음)
+  btn.disabled = true;
   try {
-    // 신청 전 최신 DB 로드 (중복/마감 정확히 체크)
-    await dbLoad();
-    var uid  = mkUid(currentUser);
-    var site = currentUser.site;
-    var ak   = aKey(pendKey, site);
-    if (!DB.apps) DB.apps = {};
-    if (!DB.apps[ak]) DB.apps[ak] = [];
-    var arr  = DB.apps[ak];
-    var maxS = getMaxSlots(pendKey, site);
-    if (arr.length >= maxS) {
-      showToast('방금 마감되었습니다.', 'err');
-      closeApply(); render(); btn.disabled=false; btn.textContent='신청 확정'; return;
-    }
-    var dup = arr.some(function(a){ return a.uid===uid; });
-    if (dup) {
-      showToast('이미 신청하셨습니다.', 'err');
-      closeApply(); render(); btn.disabled=false; btn.textContent='신청 확정'; return;
-    }
-    arr.push({ name:currentUser.name, site:site, uid:uid });
-    // UI 먼저 갱신 (체감 속도 향상)
-    closeApply(); render(); updateStats();
-    showToast('신청이 완료되었습니다! 🎉', 'ok');
-    // 서버 저장 (실패 시 롤백)
-    try {
-      await dbSave();
-    } catch(saveErr) {
-      // 저장 실패 시 로컬 롤백
-      if (DB.apps[ak]) {
-        DB.apps[ak] = DB.apps[ak].filter(function(a){ return a.uid !== uid; });
-        if (!DB.apps[ak].length) delete DB.apps[ak];
-      }
-      render(); updateStats();
-      showToast('저장 실패. 다시 시도해주세요.', 'err');
-    }
-  } catch(e) { showToast('오류가 발생했습니다. 다시 시도해주세요.', 'err'); console.error(e); }
+    await dbSave();
+  } catch(e) {
+    // 저장 실패 시 롤백
+    DB.apps[ak] = DB.apps[ak].filter(function(a){ return a.uid !== uid; });
+    if (!DB.apps[ak].length) delete DB.apps[ak];
+    render(); updateStats();
+    showToast('저장 실패. 다시 시도해주세요.', 'err');
+  }
   btn.disabled = false; btn.textContent = '신청 확정';
 }
 

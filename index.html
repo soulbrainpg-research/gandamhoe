@@ -470,19 +470,24 @@ async function dbLoad() {
       DB = raw;
       if (!DB.config) DB.config = defaultCfg();
       if (!DB.apps)   DB.apps   = {};
-    } else {
-      DB = { config: defaultCfg(), apps: {} };
     }
-  } catch(e) { console.warn('dbLoad 실패:', e.message); }
+    // 로드 실패해도 기존 DB 유지 (데이터 보호)
+  } catch(e) {
+    console.warn('dbLoad 실패 — 기존 DB 유지:', e.message);
+  }
 }
 
 async function dbSave() {
+  // 저장 전 DB가 유효한지 확인
+  if (!DB || !DB.apps) {
+    throw new Error('DB가 비어있어 저장 중단 (데이터 보호)');
+  }
   var r = await fetch(BIN_URL, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'X-Master-Key': BIN_KEY,
-      'X-Bin-Versioning': 'true'   // 버전 자동 저장 → 데이터 복원 가능
+      'X-Bin-Versioning': 'true'
     },
     body: JSON.stringify(DB)
   });
@@ -495,34 +500,30 @@ var SN  = { pangyo:'판교', yongin:'용인', gongju:'공주', daejeon:'대전' 
 var ALL_SITES = ['pangyo','yongin','gongju','daejeon'];
 function sn(s) { return SN[s] || s; }
 
+// 날짜의 요일이 그 달의 몇 번째인지 빠르게 계산 (루프 없이)
+function weekNum(d) { return Math.ceil(d / 7); }
+
 function isDefaultDay(y, m, d, site) {
   var dow = new Date(y, m-1, d).getDay();
-  // 해당 날짜가 그 달에서 몇 번째 같은 요일인지 정확히 계산
-  var wk = 0;
-  for (var i = 1; i <= d; i++) {
-    if (new Date(y, m-1, i).getDay() === dow) wk++;
-  }
+  var wk  = weekNum(d);
 
-  // 판교: 6~7월=1·3번째 월요일 + 6~8월=매주 금요일 / 8월=금요일만
+  // 판교: 6~7월=1·3번째 월요일 + 6~8월=매주 금요일
   if (site === 'pangyo') {
     if (dow === 5 && m >= 6 && m <= 8) return true;
     if (dow === 1 && (m === 6 || m === 7) && (wk === 1 || wk === 3)) return true;
     return false;
   }
-
-  // 용인: 6~7월 2·4번째 월요일만
+  // 용인: 6~7월 2·4번째 월요일
   if (site === 'yongin') {
     return dow === 1 && (m === 6 || m === 7) && (wk === 2 || wk === 4);
   }
-
-  // 공주: 6월=3·4번째 수요일 / 7~8월=2번째 이후(첫번째 제외)
+  // 공주: 6월=3·4번째 수요일 / 7~8월=2번째 이후
   if (site === 'gongju') {
     if (dow !== 3) return false;
     if (m === 6) return wk === 3 || wk === 4;
     if (m === 7 || m === 8) return wk >= 2;
     return false;
   }
-
   // 대전: 6월=2번째 수요일 / 7~9월=1번째 수요일
   if (site === 'daejeon') {
     if (dow !== 3) return false;
@@ -530,7 +531,6 @@ function isDefaultDay(y, m, d, site) {
     if (m >= 7 && m <= 9) return wk === 1;
     return false;
   }
-
   return false;
 }
 
@@ -670,23 +670,40 @@ function render() {
     var emp = document.createElement('div'); emp.className = 'cell off'; body.appendChild(emp);
   }
 
+  // 달력 루프 전 공통값 캐싱
+  var mySite = currentUser ? currentUser.site : null;
+  var myUid  = currentUser ? mkUid(currentUser) : null;
+
+  // anyOpen 결과 미리 계산 (루프마다 4번씩 반복 방지)
+  var anyOpenCache = {};
+  var mySiteOpenCache = {};
+  for (var pd = 1; pd <= td; pd++) {
+    var phol = HOL[makeDk(y,m,pd)] || null;
+    var ppast = (y < t.y)||(y===t.y&&m<t.m)||(y===t.y&&m===t.m&&pd<t.d);
+    if (!phol && !ppast && inRange(y,m)) {
+      anyOpenCache[pd] = anyOpen(y, m, pd);
+      if (mySite) mySiteOpenCache[pd] = isSiteOpen(y, m, pd, mySite);
+    } else {
+      anyOpenCache[pd] = false;
+      mySiteOpenCache[pd] = false;
+    }
+  }
+
   for (var d = 1; d <= td; d++) {
     (function(d) {
       var cell  = document.createElement('div');
       var dow   = new Date(y, m-1, d).getDay();
       var dkStr = makeDk(y, m, d);
       var hol   = HOL[dkStr] || null;
-      var past  = isPast(y, m, d);
+      var past  = (y < t.y) || (y===t.y && m < t.m) || (y===t.y && m===t.m && d < t.d);
       var isToday = (y===t.y && m===t.m && d===t.d);
 
-      var mySite  = currentUser ? currentUser.site : null;
-      var myOpen  = mySite ? isSiteOpen(y, m, d, mySite) : false;
-      var myUid   = currentUser ? mkUid(currentUser) : null;
+      var myOpen  = mySiteOpenCache[d] || false;
       var myMax   = mySite ? getMaxSlots(dkStr, mySite) : 4;
       var myApps  = (mySite && !hol) ? getApps(dkStr, mySite) : [];
       var myFull  = myApps.length >= myMax;
       var myApp   = myUid ? myApps.some(function(a){return a.uid===myUid;}) : false;
-      var hasAny  = !hol && !past && inRange(y,m) && anyOpen(y,m,d);
+      var hasAny  = anyOpenCache[d] || false;
 
       var st;
       if (!inRange(y,m) || past)       st = 'off';
@@ -825,6 +842,7 @@ async function confirmApply() {
   var btn = document.getElementById('applyOk');
   btn.disabled = true; btn.textContent = '저장 중...';
   try {
+    // 신청 전 최신 DB 로드 (중복/마감 정확히 체크)
     await dbLoad();
     var uid  = mkUid(currentUser);
     var site = currentUser.site;
@@ -843,10 +861,22 @@ async function confirmApply() {
       closeApply(); render(); btn.disabled=false; btn.textContent='신청 확정'; return;
     }
     arr.push({ name:currentUser.name, site:site, uid:uid });
+    // UI 먼저 갱신 (체감 속도 향상)
     closeApply(); render(); updateStats();
     showToast('신청이 완료되었습니다! 🎉', 'ok');
-    await dbSave();
-  } catch(e) { showToast('저장 오류. 잠시 후 다시 시도해주세요.', 'err'); console.error(e); }
+    // 서버 저장 (실패 시 롤백)
+    try {
+      await dbSave();
+    } catch(saveErr) {
+      // 저장 실패 시 로컬 롤백
+      if (DB.apps[ak]) {
+        DB.apps[ak] = DB.apps[ak].filter(function(a){ return a.uid !== uid; });
+        if (!DB.apps[ak].length) delete DB.apps[ak];
+      }
+      render(); updateStats();
+      showToast('저장 실패. 다시 시도해주세요.', 'err');
+    }
+  } catch(e) { showToast('오류가 발생했습니다. 다시 시도해주세요.', 'err'); console.error(e); }
   btn.disabled = false; btn.textContent = '신청 확정';
 }
 
@@ -1349,8 +1379,11 @@ function showToast(msg, type) {
   setHdr(); render(); updateStats();
 
   setInterval(async function() {
-    await dbLoad(); render(); updateStats();
-    if (isAdmin) renderAdminPanel();
+    // 저장 중일 때는 자동갱신 건너뜀 (덮어씌우기 방지)
+    if (document.getElementById('applyOk') &&
+        document.getElementById('applyOk').textContent === '저장 중...') return;
+    var ok = await dbLoad();
+    if (ok) { render(); updateStats(); if (isAdmin) renderAdminPanel(); }
   }, 30000);
 })();
 </script>

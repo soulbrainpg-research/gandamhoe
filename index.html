@@ -302,6 +302,14 @@ button{font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s}
 
   <div class="admin-section">
     <div class="admin-section-title">📋 전체 신청 현황</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="btn btn-sm" style="background:#16a34a;color:#fff;border-color:#16a34a" onclick="downloadExcel()">
+        📥 엑셀 다운로드 (.xlsx)
+      </button>
+      <button class="btn btn-sm" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="downloadCSV()">
+        📥 CSV 다운로드
+      </button>
+    </div>
     <div id="adminApplyList" style="max-height:220px;overflow-y:auto;font-size:12px;border:1px solid var(--bd);border-radius:8px;padding:8px"></div>
   </div>
 
@@ -471,7 +479,11 @@ async function dbLoad() {
 async function dbSave() {
   var r = await fetch(BIN_URL, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Master-Key': BIN_KEY },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': BIN_KEY,
+      'X-Bin-Versioning': 'true'   // 버전 자동 저장 → 데이터 복원 가능
+    },
     body: JSON.stringify(DB)
   });
   if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -871,6 +883,8 @@ async function savePeriod() {
   var ms = parseInt(document.getElementById('cfgMStart').value);
   var me = parseInt(document.getElementById('cfgMEnd').value);
   if (!y || !ms || !me || ms > me) { showToast('올바른 기간을 입력해주세요.', 'err'); return; }
+  showToast('저장 중...', 'ok');
+  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
   if (!DB.config) DB.config = defaultCfg();
   DB.config.year = y; DB.config.mStart = ms; DB.config.mEnd = me;
   cY = y; cM = ms;
@@ -883,12 +897,14 @@ async function savePeriod() {
 
 /* ── 관리자: 정원 저장 ── */
 async function saveMaxSlots() {
+  showToast('저장 중...', 'ok');
+  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
   if (!DB.config) DB.config = defaultCfg();
   if (!DB.config.maxSlots) DB.config.maxSlots = {};
   DB.config.maxSlots.pangyo  = parseInt(document.getElementById('maxPangyo').value)  || 4;
   DB.config.maxSlots.yongin  = parseInt(document.getElementById('maxYongin').value)  || 4;
-  DB.config.maxSlots.gongju  = parseInt(document.getElementById('maxGongju').value)  || 8;
-  DB.config.maxSlots.daejeon = parseInt(document.getElementById('maxDaejeon').value) || 5;
+  DB.config.maxSlots.gongju  = parseInt(document.getElementById('maxGongju').value)  || 6;
+  DB.config.maxSlots.daejeon = parseInt(document.getElementById('maxDaejeon').value) || 6;
   try {
     await dbSave();
     render();
@@ -923,6 +939,7 @@ async function adminUnblock(key, site) { await applyOpen(key, site); }
 
 /* ── 공통 오픈/차단 로직 ── */
 async function applyOpen(key, site) {
+  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
   if (!DB.config) DB.config = defaultCfg();
   if (!DB.config.extraOpen) DB.config.extraOpen = {};
   if (!DB.config.blocked)   DB.config.blocked   = {};
@@ -942,6 +959,7 @@ async function applyOpen(key, site) {
 }
 
 async function applyBlock(key, site) {
+  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
   if (!DB.config) DB.config = defaultCfg();
   if (!DB.config.blocked)   DB.config.blocked   = {};
   if (!DB.config.extraOpen) DB.config.extraOpen = {};
@@ -974,6 +992,8 @@ async function saveDateSlot() {
   var maxV = parseInt(document.getElementById('slotMax').value);
   if (!key)        { showToast('날짜를 선택해주세요.', 'err'); return; }
   if (!maxV || maxV < 1) { showToast('정원을 1 이상 입력해주세요.', 'err'); return; }
+  showToast('저장 중...', 'ok');
+  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
   if (!DB.config)           DB.config = defaultCfg();
   if (!DB.config.dateSlots) DB.config.dateSlots = {};
   DB.config.dateSlots[key + '|' + site] = maxV;
@@ -985,6 +1005,7 @@ async function saveDateSlot() {
 }
 
 async function removeDateSlot(slotKey) {
+  await dbLoad(); // ★ 최신 데이터 먼저 로드
   if (!DB.config || !DB.config.dateSlots) return;
   delete DB.config.dateSlots[slotKey];
   try {
@@ -995,6 +1016,7 @@ async function removeDateSlot(slotKey) {
 }
 
 async function removeOverride(key, site, type) {
+  await dbLoad(); // ★ 최신 데이터 먼저 로드
   if (!DB.config) return;
   var target = type === 'block' ? DB.config.blocked : DB.config.extraOpen;
   if (!target || !target[key]) return;
@@ -1093,6 +1115,183 @@ function renderAdminPanel() {
       al.appendChild(row);
     });
   });
+}
+
+/* ── 다운로드 공통: 신청 데이터 행 생성 ── */
+function buildRows() {
+  var apps = DB.apps || {};
+  var SN2 = { pangyo:'판교', yongin:'용인', gongju:'공주', daejeon:'대전' };
+  var DOW = ['일','월','화','수','목','금','토'];
+  var rows = [];
+  // 날짜순 정렬
+  var keys = Object.keys(apps).sort(function(a,b){
+    var da = a.split('|')[0], db2 = b.split('|')[0];
+    return da.localeCompare(db2);
+  });
+  keys.forEach(function(k) {
+    var parts   = k.split('|');
+    var dkParts = parts[0].split('-');
+    var site    = parts[1];
+    var y = parseInt(dkParts[0]), m = parseInt(dkParts[1]), d = parseInt(dkParts[2]);
+    var dateStr = y + '년 ' + m + '월 ' + d + '일';
+    var dowStr  = DOW[new Date(y, m-1, d).getDay()] + '요일';
+    apps[k].forEach(function(a) {
+      rows.push({
+        날짜: dateStr,
+        요일: dowStr,
+        사업장: SN2[site] || site,
+        성명: a.name
+      });
+    });
+  });
+  return rows;
+}
+
+/* ── CSV 다운로드 ── */
+function downloadCSV() {
+  var rows = buildRows();
+  if (!rows.length) { showToast('신청 내역이 없습니다.', 'err'); return; }
+  var header = ['날짜', '요일', '사업장', '성명'];
+  var csv = '﻿'; // BOM (한글 깨짐 방지)
+  csv += header.join(',') + '\n';
+  rows.forEach(function(r) {
+    csv += [r.날짜, r.요일, r.사업장, r.성명].map(function(v){
+      return '"' + String(v).replace(/"/g, '""') + '"';
+    }).join(',') + '\n';
+  });
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url;
+  a.download = '간담회_신청내역_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV 다운로드 완료!', 'ok');
+}
+
+/* ── 엑셀(xlsx) 다운로드 ── */
+function downloadExcel() {
+  var rows = buildRows();
+  if (!rows.length) { showToast('신청 내역이 없습니다.', 'err'); return; }
+
+  // SheetJS 없이 순수 XML 방식으로 .xlsx 생성
+  var header = ['날짜', '요일', '사업장', '성명'];
+
+  // XML 특수문자 이스케이프
+  function esc(v) {
+    return String(v)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // 공유 문자열 테이블 생성
+  var strings = [];
+  var strMap  = {};
+  function addStr(v) {
+    var s = String(v);
+    if (strMap[s] === undefined) { strMap[s] = strings.length; strings.push(s); }
+    return strMap[s];
+  }
+
+  // 헤더 + 데이터 행 구성
+  var sheetRows = [];
+  // 헤더
+  var hCells = header.map(function(h){ return { t:'s', v:addStr(h) }; });
+  sheetRows.push(hCells);
+  // 데이터
+  rows.forEach(function(r) {
+    sheetRows.push([
+      { t:'s', v:addStr(r.날짜) },
+      { t:'s', v:addStr(r.요일) },
+      { t:'s', v:addStr(r.사업장) },
+      { t:'s', v:addStr(r.성명) }
+    ]);
+  });
+
+  // sheet1.xml
+  var sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  sheetXml += '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+  sheetXml += '<sheetData>';
+  var colLetters = ['A','B','C','D'];
+  sheetRows.forEach(function(rowCells, ri) {
+    sheetXml += '<row r="' + (ri+1) + '">';
+    rowCells.forEach(function(cell, ci) {
+      sheetXml += '<c r="' + colLetters[ci] + (ri+1) + '" t="s"><v>' + cell.v + '</v></c>';
+    });
+    sheetXml += '</row>';
+  });
+  sheetXml += '</sheetData>';
+  sheetXml += '<cols>';
+  sheetXml += '<col min="1" max="1" width="18" customWidth="1"/>';
+  sheetXml += '<col min="2" max="2" width="8" customWidth="1"/>';
+  sheetXml += '<col min="3" max="3" width="10" customWidth="1"/>';
+  sheetXml += '<col min="4" max="4" width="12" customWidth="1"/>';
+  sheetXml += '</cols>';
+  sheetXml += '</worksheet>';
+
+  // sharedStrings.xml
+  var ssXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  ssXml += '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' + strings.length + '" uniqueCount="' + strings.length + '">';
+  strings.forEach(function(s){ ssXml += '<si><t xml:space="preserve">' + esc(s) + '</t></si>'; });
+  ssXml += '</sst>';
+
+  // workbook.xml
+  var wbXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  wbXml += '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+  wbXml += '<sheets><sheet name="신청내역" sheetId="1" r:id="rId1"/></sheets></workbook>';
+
+  // [Content_Types].xml
+  var ctXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  ctXml += '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">';
+  ctXml += '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>';
+  ctXml += '<Default Extension="xml" ContentType="application/xml"/>';
+  ctXml += '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>';
+  ctXml += '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+  ctXml += '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>';
+  ctXml += '</Types>';
+
+  // _rels/.rels
+  var relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  relsXml += '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  relsXml += '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>';
+  relsXml += '</Relationships>';
+
+  // xl/_rels/workbook.xml.rels
+  var wbRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  wbRelsXml += '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  wbRelsXml += '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>';
+  wbRelsXml += '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>';
+  wbRelsXml += '</Relationships>';
+
+  // ZIP 생성 (JSZip 없이 순수 base64 방식)
+  // 대신 SheetJS CDN 로드 후 생성
+  var script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  script.onload = function() {
+    var wb = XLSX.utils.book_new();
+    var wsData = [header];
+    rows.forEach(function(r){ wsData.push([r.날짜, r.요일, r.사업장, r.성명]); });
+    var ws = XLSX.utils.aoa_to_sheet(wsData);
+    // 열 너비 설정
+    ws['!cols'] = [{wch:18},{wch:8},{wch:10},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, '신청내역');
+    var fname = '간담회_신청내역_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    showToast('엑셀 다운로드 완료!', 'ok');
+  };
+  script.onerror = function() {
+    // SheetJS 로드 실패 시 CSV로 대체
+    showToast('엑셀 라이브러리 로드 실패. CSV로 대신 다운로드합니다.', 'warn');
+    downloadCSV();
+  };
+  // 이미 로드된 경우
+  if (typeof XLSX !== 'undefined') {
+    script.onload();
+  } else {
+    document.head.appendChild(script);
+  }
 }
 
 /* ── 전체 초기화 ── */

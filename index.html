@@ -406,12 +406,10 @@ button{font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s}
 /* ── 관리자 비밀번호 (변경 가능) ── */
 var ADMIN_PW = 'admin1234';
 
-/* ── JSONBin ── */
-var BIN_KEY = '$2a$10$Rc9QTVaSi1qgHb0pz6nZyu2fKwJGoluXkxoo5zHNThLZ4raV8DOkK';
-var BIN_ID  = '6a027ce9adc21f119a87e4f9';
-var BIN_URL = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
-var SESS_USER  = 'gdm_user_v7';
-var SESS_ADMIN = 'gdm_admin_v7';
+/* ── Firebase Realtime Database ── */
+var FB_URL = 'https://soulbrain-gandamhoe-80ee6-default-rtdb.asia-southeast1.firebasedatabase.app';
+var SESS_USER  = 'gdm_user_v8';
+var SESS_ADMIN = 'gdm_admin_v8';
 
 /* ── 상태 ── */
 var cY, cM;
@@ -460,38 +458,35 @@ function getMaxSlots(dk, site) {
 /* ── JSONBin I/O ── */
 async function dbLoad() {
   try {
-    var r = await fetch(BIN_URL + '/latest', {
-      headers: { 'X-Master-Key': BIN_KEY, 'X-Bin-Meta': 'false' }
-    });
+    var r = await fetch(FB_URL + '/db.json');
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    var d = await r.json();
-    var raw = (d && d.record !== undefined) ? d.record : d;
+    var raw = await r.json();
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       DB = raw;
       if (!DB.config) DB.config = defaultCfg();
       if (!DB.apps)   DB.apps   = {};
+    } else {
+      // null(빈 DB)이면 초기값 설정
+      if (!DB || !DB.apps) DB = { config: defaultCfg(), apps: {} };
     }
-    // 로드 실패해도 기존 DB 유지 (데이터 보호)
   } catch(e) {
     console.warn('dbLoad 실패 — 기존 DB 유지:', e.message);
   }
 }
 
 async function dbSave() {
-  // 저장 전 DB가 유효한지 확인
-  if (!DB || !DB.apps) {
-    throw new Error('DB가 비어있어 저장 중단 (데이터 보호)');
-  }
-  var r = await fetch(BIN_URL, {
+  var r = await fetch(FB_URL + '/db.json', {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': BIN_KEY,
-      'X-Bin-Versioning': 'true'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(DB)
   });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+  if (!r.ok) {
+    var errText = '';
+    try { errText = await r.text(); } catch(e) {}
+    console.error('[dbSave] 실패:', r.status, errText);
+    throw new Error('HTTP ' + r.status);
+  }
+  console.log('[dbSave] 저장 성공. apps 수:', Object.keys(DB.apps||{}).length);
 }
 
 /* ── 날짜 규칙 ── */
@@ -633,12 +628,19 @@ function doLogout() {
 }
 
 /* ── 새로고침 ── */
-async function doRefresh() {
-  var b = document.getElementById('btnRef'); b.classList.add('spinning');
-  await dbLoad(); render(); updateStats();
-  if (isAdmin) renderAdminPanel();
-  b.classList.remove('spinning');
-  showToast('현황이 갱신되었습니다.', 'ok');
+function doRefresh() {
+  var b = document.getElementById('btnRef');
+  b.classList.add('spinning');
+  // 백그라운드 로드 — 화면은 즉시 반응, 데이터 오면 갱신
+  dbLoad().then(function() {
+    render(); updateStats();
+    if (isAdmin) renderAdminPanel();
+    b.classList.remove('spinning');
+    showToast('현황이 갱신되었습니다.', 'ok');
+  }).catch(function() {
+    b.classList.remove('spinning');
+    showToast('갱신 실패. 다시 시도해주세요.', 'err');
+  });
 }
 
 /* ── 달력 이동 ── */
@@ -863,16 +865,28 @@ async function confirmApply() {
   closeApply(); render(); updateStats();
   showToast('신청이 완료되었습니다! 🎉', 'ok');
 
-  // 서버 저장 (백그라운드 — 사용자는 기다리지 않음)
+  // 서버 저장 — 실패 시 1회 재시도
   btn.disabled = true;
-  try {
-    await dbSave();
-  } catch(e) {
-    // 저장 실패 시 롤백
-    DB.apps[ak] = DB.apps[ak].filter(function(a){ return a.uid !== uid; });
-    if (!DB.apps[ak].length) delete DB.apps[ak];
+  var saved = false;
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try {
+      await dbSave();
+      saved = true;
+      break;
+    } catch(e) {
+      if (attempt === 0) {
+        await new Promise(function(r){ setTimeout(r, 800); });
+      }
+    }
+  }
+  if (!saved) {
+    // 저장 최종 실패 → 롤백 후 다시 신청 요청
+    if (DB.apps[ak]) {
+      DB.apps[ak] = DB.apps[ak].filter(function(a){ return a.uid !== uid; });
+      if (!DB.apps[ak].length) delete DB.apps[ak];
+    }
     render(); updateStats();
-    showToast('저장 실패. 다시 시도해주세요.', 'err');
+    showToast('⚠️ 저장 실패! 다시 신청해주세요.', 'err');
   }
   btn.disabled = false; btn.textContent = '신청 확정';
 }
@@ -881,11 +895,23 @@ async function doDelete(dkStr, site, myUid) {
   if (!currentUser || mkUid(currentUser) !== myUid) { showToast('본인 신청만 취소 가능합니다.', 'err'); return; }
   var ak = aKey(dkStr, site);
   if (!DB.apps || !DB.apps[ak]) return;
+  // 로컬 즉시 반영
+  var backup = DB.apps[ak].slice();
   DB.apps[ak] = DB.apps[ak].filter(function(a){ return a.uid !== myUid; });
   if (!DB.apps[ak].length) delete DB.apps[ak];
   render(); updateStats();
   showToast('신청이 취소되었습니다.', 'ok');
-  try { await dbSave(); } catch(e) { showToast('서버 저장 오류.', 'err'); }
+  // 서버 저장 — 실패 시 롤백
+  var saved = false;
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try { await dbSave(); saved = true; break; }
+    catch(e) { if (attempt === 0) await new Promise(function(r){ setTimeout(r, 800); }); }
+  }
+  if (!saved) {
+    DB.apps[ak] = backup; // 롤백
+    render(); updateStats();
+    showToast('⚠️ 저장 실패! 다시 취소해주세요.', 'err');
+  }
 }
 
 /* ── 관리자: 강제 취소 ── */
@@ -910,8 +936,7 @@ async function savePeriod() {
   var ms = parseInt(document.getElementById('cfgMStart').value);
   var me = parseInt(document.getElementById('cfgMEnd').value);
   if (!y || !ms || !me || ms > me) { showToast('올바른 기간을 입력해주세요.', 'err'); return; }
-  showToast('저장 중...', 'ok');
-  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
+  await dbLoad();
   if (!DB.config) DB.config = defaultCfg();
   DB.config.year = y; DB.config.mStart = ms; DB.config.mEnd = me;
   cY = y; cM = ms;
@@ -924,8 +949,7 @@ async function savePeriod() {
 
 /* ── 관리자: 정원 저장 ── */
 async function saveMaxSlots() {
-  showToast('저장 중...', 'ok');
-  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
+  await dbLoad();
   if (!DB.config) DB.config = defaultCfg();
   if (!DB.config.maxSlots) DB.config.maxSlots = {};
   DB.config.maxSlots.pangyo  = parseInt(document.getElementById('maxPangyo').value)  || 4;
@@ -966,7 +990,7 @@ async function adminUnblock(key, site) { await applyOpen(key, site); }
 
 /* ── 공통 오픈/차단 로직 ── */
 async function applyOpen(key, site) {
-  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
+  await dbLoad();
   if (!DB.config) DB.config = defaultCfg();
   if (!DB.config.extraOpen) DB.config.extraOpen = {};
   if (!DB.config.blocked)   DB.config.blocked   = {};
@@ -986,7 +1010,7 @@ async function applyOpen(key, site) {
 }
 
 async function applyBlock(key, site) {
-  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
+  await dbLoad();
   if (!DB.config) DB.config = defaultCfg();
   if (!DB.config.blocked)   DB.config.blocked   = {};
   if (!DB.config.extraOpen) DB.config.extraOpen = {};
@@ -1019,8 +1043,7 @@ async function saveDateSlot() {
   var maxV = parseInt(document.getElementById('slotMax').value);
   if (!key)        { showToast('날짜를 선택해주세요.', 'err'); return; }
   if (!maxV || maxV < 1) { showToast('정원을 1 이상 입력해주세요.', 'err'); return; }
-  showToast('저장 중...', 'ok');
-  await dbLoad(); // ★ 최신 데이터 먼저 로드 (신청 내역 보호)
+  await dbLoad();
   if (!DB.config)           DB.config = defaultCfg();
   if (!DB.config.dateSlots) DB.config.dateSlots = {};
   DB.config.dateSlots[key + '|' + site] = maxV;
@@ -1032,7 +1055,7 @@ async function saveDateSlot() {
 }
 
 async function removeDateSlot(slotKey) {
-  await dbLoad(); // ★ 최신 데이터 먼저 로드
+  await dbLoad();
   if (!DB.config || !DB.config.dateSlots) return;
   delete DB.config.dateSlots[slotKey];
   try {
@@ -1043,7 +1066,7 @@ async function removeDateSlot(slotKey) {
 }
 
 async function removeOverride(key, site, type) {
-  await dbLoad(); // ★ 최신 데이터 먼저 로드
+  await dbLoad();
   if (!DB.config) return;
   var target = type === 'block' ? DB.config.blocked : DB.config.extraOpen;
   if (!target || !target[key]) return;

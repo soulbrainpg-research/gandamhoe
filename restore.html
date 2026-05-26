@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>데이터 복원 도구</title>
+<style>
+body{font-family:sans-serif;background:#f5f5f5;padding:20px;color:#333}
+h2{color:#2563eb}
+.card{background:#fff;border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+button{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:600}
+.btn-load{background:#2563eb;color:#fff}.btn-load:hover{background:#1d4ed8}
+.btn-restore{background:#16a34a;color:#fff}.btn-restore:hover{background:#15803d}
+.btn-preview{background:#f5f7fb;color:#374151;border:1px solid #dde3ed}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f5f7fb;padding:8px 12px;text-align:left;border-bottom:2px solid #dde3ed}
+td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:top}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-apps{background:#eff6ff;color:#1d4ed8}
+.badge-empty{background:#fff1f2;color:#dc2626}
+pre{background:#f8f8f8;border-radius:6px;padding:12px;font-size:11px;overflow:auto;max-height:300px;border:1px solid #eee}
+.msg{padding:10px 14px;border-radius:8px;margin-top:8px;font-size:13px}
+.msg.ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.msg.err{background:#fff1f2;color:#dc2626;border:1px solid #fecaca}
+.msg.warn{background:#fffbeb;color:#d97706;border:1px solid #fcd34d}
+</style>
+</head>
+<body>
+<h2>🔧 간담회 신청 데이터 복원 도구</h2>
+
+<div class="card">
+  <h3 style="margin-bottom:12px;font-size:15px">1단계 — 버전 목록 불러오기</h3>
+  <p style="font-size:13px;color:#6b7a99;margin-bottom:12px">JSONBin에 저장된 이전 버전 목록을 조회합니다.</p>
+  <button class="btn-load" onclick="loadVersions()">📋 버전 목록 불러오기</button>
+  <div id="loadMsg"></div>
+</div>
+
+<div class="card" id="versionCard" style="display:none">
+  <h3 style="margin-bottom:12px;font-size:15px">2단계 — 복원할 버전 선택</h3>
+  <p style="font-size:13px;color:#6b7a99;margin-bottom:12px">
+    신청자 수가 가장 많은 버전을 찾아 미리보기 후 복원하세요.
+  </p>
+  <div id="versionList"></div>
+</div>
+
+<div class="card" id="previewCard" style="display:none">
+  <h3 style="margin-bottom:12px;font-size:15px">3단계 — 미리보기 & 복원</h3>
+  <div id="previewContent"></div>
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-restore" id="restoreBtn" onclick="restoreVersion()" style="display:none">
+      ✅ 이 버전으로 복원하기
+    </button>
+    <button class="btn-preview" onclick="document.getElementById('previewCard').style.display='none'">
+      닫기
+    </button>
+  </div>
+  <div id="restoreMsg"></div>
+</div>
+
+<script>
+var BIN_KEY = '$2a$10$Rc9QTVaSi1qgHb0pz6nZyu2fKwJGoluXkxoo5zHNThLZ4raV8DOkK';
+var BIN_ID  = '6a027ce9adc21f119a87e4f9';
+var BIN_URL = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
+var selectedVersion = null;
+var selectedData    = null;
+
+// 신청 인원 수 계산
+function countApps(data) {
+  if (!data || !data.apps) return 0;
+  var total = 0;
+  Object.keys(data.apps).forEach(function(k){ total += data.apps[k].length; });
+  return total;
+}
+
+// 버전 목록 로드
+async function loadVersions() {
+  document.getElementById('loadMsg').innerHTML = '<div class="msg warn">⏳ 불러오는 중...</div>';
+  try {
+    var r = await fetch(BIN_URL + '/versions', {
+      headers: { 'X-Master-Key': BIN_KEY }
+    });
+    var d = await r.json();
+
+    if (!r.ok) {
+      document.getElementById('loadMsg').innerHTML =
+        '<div class="msg err">❌ 오류: ' + (d.message || r.status) + '</div>';
+      return;
+    }
+
+    var versions = d.record || d;
+    if (!Array.isArray(versions) || versions.length === 0) {
+      document.getElementById('loadMsg').innerHTML =
+        '<div class="msg warn">⚠️ 저장된 버전이 없습니다. JSONBin 무료 플랜은 버전 관리가 지원되지 않을 수 있습니다.</div>';
+      return;
+    }
+
+    document.getElementById('loadMsg').innerHTML =
+      '<div class="msg ok">✅ ' + versions.length + '개 버전을 찾았습니다.</div>';
+
+    renderVersions(versions);
+  } catch(e) {
+    document.getElementById('loadMsg').innerHTML =
+      '<div class="msg err">❌ 네트워크 오류: ' + e.message + '</div>';
+  }
+}
+
+// 버전 목록 렌더
+function renderVersions(versions) {
+  var card = document.getElementById('versionCard');
+  card.style.display = 'block';
+  var list = document.getElementById('versionList');
+
+  var html = '<table><tr><th>버전</th><th>저장 시각</th><th>신청 인원</th><th>액션</th></tr>';
+  versions.forEach(function(v, i) {
+    var vNum   = v.version || (versions.length - i);
+    var date   = v.updatedAt ? new Date(v.updatedAt).toLocaleString('ko-KR') : '-';
+    var data   = v.record || v.document || null;
+    var count  = data ? countApps(data) : '?';
+    var badge  = count > 0
+      ? '<span class="badge badge-apps">👥 ' + count + '명</span>'
+      : '<span class="badge badge-empty">0명</span>';
+
+    html += '<tr>' +
+      '<td><strong>v' + vNum + '</strong></td>' +
+      '<td>' + date + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td><button class="btn-preview" onclick="previewVersion(' + i + ', this)">미리보기</button></td>' +
+      '</tr>';
+  });
+  html += '</table>';
+  list.innerHTML = html;
+
+  // 버전 데이터를 전역 저장
+  window._versions = versions;
+}
+
+// 특정 버전 미리보기
+async function previewVersion(idx, btn) {
+  var v = window._versions[idx];
+  var vNum = v.version || (window._versions.length - idx);
+
+  document.getElementById('previewCard').style.display = 'block';
+  document.getElementById('previewContent').innerHTML = '<div class="msg warn">⏳ 불러오는 중...</div>';
+  document.getElementById('restoreBtn').style.display = 'none';
+  document.getElementById('restoreMsg').innerHTML = '';
+
+  try {
+    // 버전 데이터가 이미 있으면 그대로 사용, 없으면 API로 조회
+    var data = v.record || v.document;
+    if (!data) {
+      var r = await fetch(BIN_URL + '/' + vNum, {
+        headers: { 'X-Master-Key': BIN_KEY, 'X-Bin-Meta': 'false' }
+      });
+      var d = await r.json();
+      data = d.record || d;
+    }
+
+    selectedVersion = vNum;
+    selectedData    = data;
+
+    var count = countApps(data);
+    var apps  = data.apps || {};
+    var appSummary = '';
+    Object.keys(apps).sort().forEach(function(k) {
+      var parts = k.split('|');
+      var dk    = parts[0];
+      var site  = parts[1];
+      var siteNames = {pangyo:'판교',yongin:'용인',gongju:'공주',daejeon:'대전'};
+      apps[k].forEach(function(a){
+        appSummary += dk + ' (' + (siteNames[site]||site) + ') — ' + a.name + '\n';
+      });
+    });
+
+    var html = '<div class="msg ok" style="margin-bottom:10px">📋 v' + vNum + ' — 총 <strong>' + count + '명</strong> 신청 내역</div>';
+    if (count > 0) {
+      html += '<pre>' + (appSummary || JSON.stringify(apps, null, 2)) + '</pre>';
+    } else {
+      html += '<div class="msg warn">이 버전에는 신청 내역이 없습니다.</div>';
+    }
+    document.getElementById('previewContent').innerHTML = html;
+
+    if (count > 0) {
+      document.getElementById('restoreBtn').style.display = 'inline-flex';
+    }
+  } catch(e) {
+    document.getElementById('previewContent').innerHTML =
+      '<div class="msg err">❌ 오류: ' + e.message + '</div>';
+  }
+}
+
+// 복원
+async function restoreVersion() {
+  if (!selectedData) return;
+  var btn = document.getElementById('restoreBtn');
+  btn.textContent = '⏳ 복원 중...';
+  btn.disabled = true;
+
+  try {
+    var r = await fetch(BIN_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': BIN_KEY
+      },
+      body: JSON.stringify(selectedData)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+    document.getElementById('restoreMsg').innerHTML =
+      '<div class="msg ok" style="margin-top:10px">✅ 복원 완료! 간담회 신청 페이지를 새로고침하면 데이터가 보입니다.</div>';
+    btn.textContent = '✅ 복원 완료';
+  } catch(e) {
+    document.getElementById('restoreMsg').innerHTML =
+      '<div class="msg err" style="margin-top:10px">❌ 복원 실패: ' + e.message + '</div>';
+    btn.textContent = '✅ 이 버전으로 복원하기';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
